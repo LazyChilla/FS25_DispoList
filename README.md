@@ -33,7 +33,6 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 ### Voraussetzungen
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0)
 
 ### Installation
 
