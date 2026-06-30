@@ -33,7 +33,6 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 ### Voraussetzungen
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0) — muss ebenfalls installiert sein
 
 ### Installation
 
@@ -95,7 +94,6 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 ### Requirements
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0) — must also be installed
 
 ### Installation
 
@@ -153,7 +151,6 @@ Particularité: Les **produits libres** sont calculés automatiquement — ce qu
 ### Prérequis
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0)
 
 ### Crédits
 
@@ -188,7 +185,6 @@ Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente �
 ### Requisiti
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0)
 
 ### Crediti
 
@@ -258,7 +254,6 @@ Característica especial: Los **productos libres** se calculan automáticamente 
 ### Requisitos
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0)
 
 ### Créditos
 
