@@ -16,9 +16,12 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 
 - 🔄 **Freie Waren** — Automatische Berechnung was aus Produktionen zum Verkauf/Transport verfügbar ist
 - 📦 **Lagerbestand** — Aktueller Bestand und freie Kapazität pro Ware
+- 🔎 **Lageransicht** — Klick auf eine Ware zeigt, in welchem Lager wie viel liegt (Zentrallager, Silos, Tierhaltung, Fabrik-Ausgänge u.v.m.)
+- 🧮 **Lagertypen wählbar** — selbst bestimmen was mitgezählt wird (Zentrallager, Silos, Silo-Extensions, Tierhaltung, Misthaufen, Fahrsilo, Objektlager, Fabrik-Ausgänge)
 - 💰 **Bestpreise** — Bester und maximaler Verkaufspreis pro Ware und Monat
 - 🏭 **Gesamtwert** — Wert aller freier Waren pro Station
 - 🗂️ **Bereiche** — Waren nach eigenen Kategorien gruppieren (z.B. Getreide, Flüssig, Kühlung)
+- ✏️ **Bereiche verwalten** — eigene Bereiche anlegen, umbenennen und löschen
 - 🏪 **Stationen** — Filteransicht pro Verkaufsstation
 - ⭐ **CW only** — Nur Zentrallager-Bereiche anzeigen (ideal für NF Marsch)
 - 🔍 **Suche** — Schnellsuche nach Waren oder Stationen
@@ -27,6 +30,8 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
   - *Zentrallager*: optimiert für Karten mit Zentrallager (z.B. NF Marsch)
   - *Giants*: Standard-Kategorien aus dem Spiel
 - ⏱️ **Refresh-Intervall** — Einstellbar (5s / 15s / 30s / 60s / 120s / manuell) für optimale Performance
+- 🌗 **Kontrast/Transparenz** — Box-Hintergrund in 3 Stufen (hell / dunkel / transparent)
+- 📜 **Mausrad-Scrollen** — in beiden Listen bequem per Mausrad blättern
 - 🌍 **Mehrsprachig** — DE, EN, FR, IT, PT, ES
 - 🖱️ **Maussteuerung** — Vollständig per Maus bedienbar inkl. sichtbarem Mauscursor im HUD (F9 / F12, je nach HL HUD System Einstellung)
 
@@ -48,10 +53,28 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 |---|---|
 | DispoList ein/aus | `Shift + C` (anpassbar) |
 | Maussteuerung | `F9 / F12` (HL HUD System) |
-| Spalten ein/aus | Klick auf Spaltenheader |
-| Bereich zuordnen | Filter-HUD → Bereiche → Ware anklicken |
+| Einstellungsmenü öffnen | Klick auf das Einstellungen-Icon in der Icon-Leiste |
+| Spalten ein/aus | Einstellungsmenü → „Spalten anzeigen" |
+| Lageransicht (Drill-Down) | Klick auf die Warenzeile |
+| Bereich zuordnen | Filter-HUD → Ware anklicken, dann Zielbereich anklicken |
+| Bereich erstellen | „+ Neuer Bereich" — oberste Zeile der Bereiche-Liste |
+| Bereich umbenennen/löschen | Rechtsklick auf einen Bereich → Kontextmenü |
+| Sortierung Wert ↔ A–Z | Klick auf das Sortier-Icon (Wert-Sortierung pausiert den Refresh) |
+| Kontrast/Transparenz | Klick auf das Kontrast-Icon in der Icon-Leiste |
+| Listen scrollen | Mausrad |
 | CW only Toggle | Stern-Icon ⭐ in der Icon-Leiste |
-| Refresh-Intervall | Einstellbar in den Einstellungen |
+| Refresh-Intervall | Einstellbar im Einstellungsmenü |
+
+### Einstellungsmenü
+
+Ein Klick auf das **Einstellungen-Icon** in der Icon-Leiste öffnet das Einstellungsmenü — alle Optionen an einem Ort:
+
+- **Spalten anzeigen** — jede Spalte einzeln ein-/ausblenden: Bestand, Frei, Preis/1000l, Max/1000l, Wert, Frei Wert, Max €, Frei Max, Bester Monat
+- **Fabrik-Puffer** — über `[−]` / `[+]` einstellen, wie viele Stunden Vorrat im Lager bleiben, bevor Ware als „frei" gilt (Formel: Bestand − Bedarf/h × Puffer = freie Menge)
+- **Lagertypen** — festlegen, was mitgezählt wird (Zentrallager, Silos, Silo-Extensions, Tierhaltung, Misthaufen, Fahrsilo, Objektlager, Fabrik-Ausgänge); angezeigt werden nur die Typen, die es auf deiner Karte wirklich gibt
+- **Bereiche-Preset** — „Selbst einrichten" (nichts ändern), „Zentrallager-Preset laden" oder „Giants-Standard laden"
+
+> 💡 **Gut zu wissen:** Sobald du die Liste nach **Wert** sortierst (Klick auf das Sortier-Icon), pausiert der automatische Refresh und zeigt „Pausiert" an. Das ist Absicht — sonst würden die Zeilen bei jeder Aktualisierung ihre Plätze tauschen und die Liste würde dir wegspringen. Zurück auf **A–Z**, und der Refresh läuft wieder ganz normal.
 
 ### Multiplayer
 
@@ -59,7 +82,7 @@ Grundsätzlich MP-fähig — jeder Spieler benötigt den Mod. **Nicht offiziell 
 
 ### Credits
 
-- **HappyLooser** — HL HUD System Framework
+- **HappyLooser** — HL HUD System Framework (mit freundlicher Genehmigung zur Einbettung — vielen Dank für die Freigabe!)
 - **FedAction** — NF Marsch Karte & Inspiration für den Zentrallager-Filter
 - **LazyChilla** — Mod-Entwicklung
 
@@ -77,9 +100,12 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 
 - 🔄 **Free goods** — Automatic calculation of what is available from productions for sale/transport
 - 📦 **Stock** — Current stock and free capacity per product
+- 🔎 **Storage view** — Click a product to see which storage holds how much (central warehouse, silos, animal pens, factory outputs and more)
+- 🧮 **Selectable storage types** — Decide yourself what gets counted (central warehouse, silos, silo extensions, animal pens, manure heaps, bunker silos, object storage, factory outputs)
 - 💰 **Best prices** — Best and maximum selling price per product and month
 - 🏭 **Total value** — Value of all free goods per station
 - 🗂️ **Zones** — Group products into custom categories (e.g. Grain, Liquid, Cooling)
+- ✏️ **Manage zones** — Create, rename and delete your own zones
 - 🏪 **Stations** — Filter view per selling station
 - ⭐ **CW only** — Show central warehouse zones only (ideal for NF Marsch)
 - 🔍 **Search** — Quick search for products or stations
@@ -88,6 +114,8 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
   - *Central WH*: optimised for maps with central warehouse (e.g. NF Marsch)
   - *Giants*: default categories from the base game
 - ⏱️ **Refresh interval** — Configurable (5s / 15s / 30s / 60s / 120s / manual) for optimal performance
+- 🌗 **Contrast/Transparency** — Box background in 3 levels (bright / dark / transparent)
+- 📜 **Mouse wheel scrolling** — Scroll both lists conveniently with the mouse wheel
 - 🌍 **Multilingual** — DE, EN, FR, IT, PT, ES
 - 🖱️ **Mouse control** — Fully operable via mouse incl. visible cursor in the HUD (F9 / F12, depends on HL HUD System setting)
 
@@ -109,10 +137,28 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 |---|---|
 | Toggle DispoList | `Shift + C` (configurable) |
 | Mouse control | `F9 / F12` (HL HUD System) |
-| Toggle columns | Click column header |
-| Assign zone | Filter HUD → Zones → click product |
+| Open settings menu | Click the settings icon in the icon bar |
+| Toggle columns | Settings menu → "Show columns" |
+| Storage view (drill-down) | Click a product row |
+| Assign zone | Filter HUD → click product, then click target zone |
+| Create zone | "+ Neuer Bereich" button — top row of the zone list |
+| Rename/delete zone | Right-click a zone → context menu |
+| Sort by value ↔ A–Z | Click the sort icon (value sorting pauses the refresh) |
+| Contrast/transparency | Click the contrast icon in the icon bar |
+| Scroll lists | Mouse wheel |
 | CW only toggle | Star icon ⭐ in icon bar |
-| Refresh interval | Configurable in settings |
+| Refresh interval | Configurable in the settings menu |
+
+### Settings menu
+
+Clicking the **settings icon** in the icon bar opens the settings menu — every option in one place:
+
+- **Show columns** — toggle each column individually: Stock, Free, Price/1000l, Max/1000l, Value, Free Value, Max €, Free Max, Best Month
+- **Production buffer** — use `[−]` / `[+]` to set how many hours of supply stay in storage before goods count as "free" (formula: Stock − Demand/h × Buffer = free amount)
+- **Storage types** — decide what gets counted (central warehouse, silos, silo extensions, animal pens, manure heaps, bunker silos, object storage, factory outputs); only the types that actually exist on your map are shown
+- **Zone preset** — "Set up yourself" (no change), "Load central warehouse preset" or "Load Giants default"
+
+> 💡 **Good to know:** As soon as you sort the list by **value** (click the sort icon), the automatic refresh pauses and shows "Paused". That's intentional — otherwise the rows would swap places on every update and the list would jump away from you. Switch back to **A–Z** and the refresh runs normally again.
 
 ### Multiplayer
 
@@ -120,7 +166,7 @@ Generally MP-capable — each player needs the mod. **Not officially tested**, u
 
 ### Credits
 
-- **HappyLooser** — HL HUD System Framework
+- **HappyLooser** — HL HUD System Framework (kindly granted permission to embed — many thanks for the go-ahead!)
 - **FedAction** — NF Marsch map & inspiration for the central warehouse filter
 - **LazyChilla** — Mod development
 
@@ -138,23 +184,69 @@ Particularité: Les **produits libres** sont calculés automatiquement — ce qu
 
 - 🔄 **Produits libres** — Calcul automatique des produits disponibles à la vente/transport
 - 📦 **Stock** — Stock actuel et capacité libre par produit
+- 🔎 **Vue de stockage** — Cliquez sur un produit pour voir quel stock en contient combien (entrepôt central, silos, élevages, sorties d'usine, etc.)
+- 🧮 **Types de stockage sélectionnables** — Décidez vous-même ce qui est compté (entrepôt central, silos, extensions de silo, élevages, tas de fumier, silos-couloirs, stockage d'objets, sorties d'usine)
 - 💰 **Meilleurs prix** — Meilleur et maximum prix de vente par produit et par mois
 - 🏭 **Valeur totale** — Valeur de tous les produits libres par station
 - 🗂️ **Zones** — Regroupez les produits par catégories (ex. Céréales, Liquide, Réfrigération)
+- ✏️ **Gérer les zones** — Créez, renommez et supprimez vos propres zones
 - 🏪 **Stations** — Vue filtrée par station de vente
 - ⭐ **CW only** — Afficher uniquement les zones d'entrepôt central (idéal pour NF Marsch)
 - 🔍 **Recherche** — Recherche rapide de produits ou stations
 - 🎛️ **Préréglages** — Configurations de zones prédéfinies (Personnalisé / Entrepôt central / Giants standard)
 - ⏱️ **Intervalle de rafraîchissement** — Configurable (5s / 15s / 30s / 60s / 120s / manuel)
+- 🌗 **Contraste/Transparence** — Fond de la boîte en 3 niveaux (clair / sombre / transparent)
+- 📜 **Défilement à la molette** — Faites défiler les deux listes à la molette de la souris
 - 🌍 **Multilingue** — DE, EN, FR, IT, PT, ES
 
 ### Prérequis
 
 - Farming Simulator 25
 
+### Installation
+
+1. Téléchargez le fichier ZIP
+2. Extrayez-le dans votre dossier mods : `Documents/My Games/FarmingSimulator2025/mods/`
+3. Activez le mod dans le jeu
+4. **Shift+C** pour afficher/masquer la DispoList (configurable dans les paramètres)
+5. **F9 / F12** pour le contrôle à la souris (selon le réglage du HL HUD System)
+
+### Contrôles
+
+| Action | Touche / Souris |
+|---|---|
+| Afficher/masquer la DispoList | `Shift + C` (configurable) |
+| Contrôle à la souris | `F9 / F12` (HL HUD System) |
+| Ouvrir le menu des paramètres | Clic sur l'icône des paramètres dans la barre d'icônes |
+| Afficher/masquer les colonnes | Menu des paramètres → « Afficher les colonnes » |
+| Vue de stockage (détail) | Clic sur la ligne d'un produit |
+| Attribuer une zone | HUD de filtre → clic sur le produit, puis clic sur la zone cible |
+| Créer une zone | Bouton « + Neuer Bereich » — première ligne de la liste des zones |
+| Renommer/supprimer une zone | Clic droit sur une zone → menu contextuel |
+| Tri par valeur ↔ A–Z | Clic sur l'icône de tri (le tri par valeur met en pause le rafraîchissement) |
+| Contraste/transparence | Clic sur l'icône de contraste dans la barre d'icônes |
+| Faire défiler les listes | Molette de la souris |
+| Bascule CW only | Icône étoile ⭐ dans la barre d'icônes |
+| Intervalle de rafraîchissement | Configurable dans le menu des paramètres |
+
+### Menu des paramètres
+
+Un clic sur l'**icône des paramètres** dans la barre d'icônes ouvre le menu des paramètres — toutes les options au même endroit :
+
+- **Afficher les colonnes** — activez/désactivez chaque colonne individuellement : Stock, Libre, Prix/1000l, Max/1000l, Valeur, Valeur libre, Max €, Max libre, Meilleur mois
+- **Tampon de production** — réglez avec `[−]` / `[+]` combien d'heures de réserve restent en stock avant qu'un produit ne soit considéré comme « libre » (formule : Stock − Besoin/h × Tampon = quantité libre)
+- **Types de stockage** — décidez ce qui est compté (entrepôt central, silos, extensions de silo, élevages, tas de fumier, silos-couloirs, stockage d'objets, sorties d'usine) ; seuls les types réellement présents sur votre carte sont affichés
+- **Préréglage de zones** — « Configurer soi-même » (aucun changement), « Charger le préréglage entrepôt central » ou « Charger le standard Giants »
+
+> 💡 **Bon à savoir :** Dès que vous triez la liste par **valeur** (clic sur l'icône de tri), le rafraîchissement automatique se met en pause et affiche « En pause ». C'est voulu — sinon les lignes changeraient de place à chaque mise à jour et la liste vous « échapperait ». Revenez sur **A–Z** et le rafraîchissement reprend normalement.
+
+### Multijoueur
+
+Compatible multijoueur en principe — chaque joueur a besoin du mod. **Non testé officiellement**, utilisation à vos propres risques.
+
 ### Crédits
 
-- **HappyLooser** — Framework HL HUD System
+- **HappyLooser** — Framework HL HUD System (aimablement autorisé à l'intégration — un grand merci pour l'accord!)
 - **FedAction** — Carte NF Marsch & inspiration pour le filtre entrepôt central
 - **LazyChilla** — Développement du mod
 
@@ -172,23 +264,69 @@ Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente �
 
 - 🔄 **Merci libere** — Calcolo automatico di ciò che è disponibile dalle produzioni per vendita/trasporto
 - 📦 **Scorte** — Scorte attuali e capacità libera per prodotto
+- 🔎 **Vista magazzino** — Clicca su un prodotto per vedere in quale deposito e quanto è stoccato (magazzino centrale, sili, allevamenti, uscite di produzione, ecc.)
+- 🧮 **Tipi di deposito selezionabili** — Decidi tu cosa viene conteggiato (magazzino centrale, sili, estensioni sili, allevamenti, cumuli di letame, trincee, deposito oggetti, uscite di produzione)
 - 💰 **Prezzi migliori** — Prezzo di vendita migliore e massimo per prodotto e mese
 - 🏭 **Valore totale** — Valore di tutte le merci libere per stazione
 - 🗂️ **Zone** — Raggruppa i prodotti in categorie personalizzate
+- ✏️ **Gestione zone** — Crea, rinomina ed elimina le tue zone
 - 🏪 **Stazioni** — Vista filtrata per stazione di vendita
 - ⭐ **CW only** — Mostra solo le zone del magazzino centrale (ideale per NF Marsch)
 - 🔍 **Ricerca** — Ricerca rapida di prodotti o stazioni
 - 🎛️ **Preimpostazioni** — Configurazioni predefinite (Personalizzato / Magazzino centrale / Giants standard)
 - ⏱️ **Intervallo di aggiornamento** — Configurabile (5s / 15s / 30s / 60s / 120s / manuale)
+- 🌗 **Contrasto/Trasparenza** — Sfondo della finestra su 3 livelli (chiaro / scuro / trasparente)
+- 📜 **Scorrimento con rotellina** — Scorri entrambe le liste con la rotellina del mouse
 - 🌍 **Multilingue** — DE, EN, FR, IT, PT, ES
 
 ### Requisiti
 
 - Farming Simulator 25
 
+### Installazione
+
+1. Scarica il file ZIP
+2. Estrailo nella cartella mods: `Documents/My Games/FarmingSimulator2025/mods/`
+3. Attiva il mod nel gioco
+4. **Shift+C** per mostrare/nascondere la DispoList (configurabile nelle impostazioni)
+5. **F9 / F12** per il controllo con il mouse (secondo l'impostazione del HL HUD System)
+
+### Controlli
+
+| Azione | Tasto / Mouse |
+|---|---|
+| Mostra/nascondi DispoList | `Shift + C` (configurabile) |
+| Controllo con il mouse | `F9 / F12` (HL HUD System) |
+| Apri il menu impostazioni | Clic sull'icona impostazioni nella barra delle icone |
+| Mostra/nascondi colonne | Menu impostazioni → «Mostra colonne» |
+| Vista magazzino (dettaglio) | Clic sulla riga di un prodotto |
+| Assegna zona | HUD filtro → clic sul prodotto, poi clic sulla zona di destinazione |
+| Crea zona | Pulsante «+ Neuer Bereich» — prima riga dell'elenco zone |
+| Rinomina/elimina zona | Clic destro su una zona → menu contestuale |
+| Ordina per valore ↔ A–Z | Clic sull'icona di ordinamento (l'ordinamento per valore mette in pausa l'aggiornamento) |
+| Contrasto/trasparenza | Clic sull'icona contrasto nella barra delle icone |
+| Scorri le liste | Rotellina del mouse |
+| Attiva/disattiva CW only | Icona stella ⭐ nella barra delle icone |
+| Intervallo di aggiornamento | Configurabile nel menu impostazioni |
+
+### Menu impostazioni
+
+Un clic sull'**icona impostazioni** nella barra delle icone apre il menu impostazioni — tutte le opzioni in un unico posto:
+
+- **Mostra colonne** — attiva/disattiva ogni colonna singolarmente: Scorte, Libero, Prezzo/1000l, Max/1000l, Valore, Valore libero, Max €, Max libero, Miglior mese
+- **Buffer di produzione** — imposta con `[−]` / `[+]` quante ore di scorta restano in magazzino prima che un prodotto sia considerato «libero» (formula: Scorte − Fabbisogno/h × Buffer = quantità libera)
+- **Tipi di deposito** — decidi cosa viene conteggiato (magazzino centrale, sili, estensioni sili, allevamenti, cumuli di letame, trincee, deposito oggetti, uscite di produzione); vengono mostrati solo i tipi realmente presenti sulla tua mappa
+- **Preimpostazione zone** — «Configura da solo» (nessuna modifica), «Carica preimpostazione magazzino centrale» o «Carica standard Giants»
+
+> 💡 **Buono a sapersi:** Non appena ordini la lista per **valore** (clic sull'icona di ordinamento), l'aggiornamento automatico si mette in pausa e mostra «In pausa». È voluto — altrimenti le righe cambierebbero posto a ogni aggiornamento e la lista ti «scapperebbe». Torna su **A–Z** e l'aggiornamento riprende normalmente.
+
+### Multigiocatore
+
+In linea di principio compatibile MP — ogni giocatore ha bisogno del mod. **Non testato ufficialmente**, uso a proprio rischio.
+
 ### Crediti
 
-- **HappyLooser** — Framework HL HUD System
+- **HappyLooser** — Framework HL HUD System (gentilmente autorizzato all'integrazione — grazie mille per il consenso!)
 - **FedAction** — Mappa NF Marsch & ispirazione per il filtro magazzino centrale
 - **LazyChilla** — Sviluppo del mod
 
@@ -206,24 +344,69 @@ Característica especial: Os **produtos livres** são calculados automaticamente
 
 - 🔄 **Produtos livres** — Cálculo automático do que está disponível das produções para venda/transporte
 - 📦 **Estoque** — Estoque atual e capacidade livre por produto
+- 🔎 **Vista de armazenamento** — Clique num produto para ver em que armazém está e quanto (armazém central, silos, estábulos, saídas de produção, etc.)
+- 🧮 **Tipos de armazenamento selecionáveis** — Decida o que é contado (armazém central, silos, extensões de silo, estábulos, montes de estrume, silos-trincheira, armazém de objetos, saídas de produção)
 - 💰 **Melhores preços** — Melhor e máximo preço de venda por produto e mês
 - 🏭 **Valor total** — Valor de todos os produtos livres por estação
 - 🗂️ **Zonas** — Agrupe produtos em categorias personalizadas
+- ✏️ **Gerir zonas** — Crie, renomeie e elimine as suas próprias zonas
 - 🏪 **Estações** — Vista filtrada por estação de venda
 - ⭐ **CW only** — Mostrar apenas zonas do armazém central (ideal para NF Marsch)
 - 🔍 **Pesquisa** — Pesquisa rápida de produtos ou estações
 - 🎛️ **Predefinições** — Configurações predefinidas (Personalizado / Armazém central / Giants padrão)
 - ⏱️ **Intervalo de atualização** — Configurável (5s / 15s / 30s / 60s / 120s / manual)
+- 🌗 **Contraste/Transparência** — Fundo da caixa em 3 níveis (claro / escuro / transparente)
+- 📜 **Rolagem com roda do rato** — Role ambas as listas com a roda do rato
 - 🌍 **Multilíngue** — DE, EN, FR, IT, PT, ES
 
 ### Requisitos
 
 - Farming Simulator 25
-- [HappyLooser HUD System](https://www.farming-simulator.com/mods.php?title=fs2025&filter=org&org_id=51730&page=0)
+
+### Instalação
+
+1. Baixe o ficheiro ZIP
+2. Extraia para a pasta de mods: `Documents/My Games/FarmingSimulator2025/mods/`
+3. Ative o mod no jogo
+4. **Shift+C** para mostrar/ocultar a DispoList (configurável nas definições)
+5. **F9 / F12** para controlo com o rato (conforme a definição do HL HUD System)
+
+### Controlos
+
+| Ação | Tecla / Rato |
+|---|---|
+| Mostrar/ocultar DispoList | `Shift + C` (configurável) |
+| Controlo com o rato | `F9 / F12` (HL HUD System) |
+| Abrir o menu de definições | Clique no ícone de definições na barra de ícones |
+| Mostrar/ocultar colunas | Menu de definições → «Mostrar colunas» |
+| Vista de armazenamento (detalhe) | Clique na linha de um produto |
+| Atribuir zona | HUD de filtro → clique no produto, depois clique na zona de destino |
+| Criar zona | Botão «+ Neuer Bereich» — primeira linha da lista de zonas |
+| Renomear/eliminar zona | Clique direito numa zona → menu de contexto |
+| Ordenar por valor ↔ A–Z | Clique no ícone de ordenação (a ordenação por valor pausa a atualização) |
+| Contraste/transparência | Clique no ícone de contraste na barra de ícones |
+| Percorrer as listas | Roda do rato |
+| Alternar CW only | Ícone de estrela ⭐ na barra de ícones |
+| Intervalo de atualização | Configurável no menu de definições |
+
+### Menu de definições
+
+Um clique no **ícone de definições** na barra de ícones abre o menu de definições — todas as opções num só lugar:
+
+- **Mostrar colunas** — ative/desative cada coluna individualmente: Estoque, Livre, Preço/1000l, Máx/1000l, Valor, Valor livre, Máx €, Máx livre, Melhor mês
+- **Buffer de produção** — defina com `[−]` / `[+]` quantas horas de reserva ficam no armazém antes de um produto contar como «livre» (fórmula: Estoque − Procura/h × Buffer = quantidade livre)
+- **Tipos de armazenamento** — decida o que é contado (armazém central, silos, extensões de silo, estábulos, montes de estrume, silos-trincheira, armazém de objetos, saídas de produção); apenas os tipos realmente presentes no seu mapa são mostrados
+- **Predefinição de zonas** — «Configurar por si» (sem alterações), «Carregar predefinição de armazém central» ou «Carregar padrão Giants»
+
+> 💡 **Bom saber:** Assim que ordenar a lista por **valor** (clique no ícone de ordenação), a atualização automática pausa e mostra «Pausado». É intencional — caso contrário, as linhas trocariam de lugar a cada atualização e a lista «fugiria». Volte para **A–Z** e a atualização continua normalmente.
+
+### Multijogador
+
+Em princípio compatível com MP — cada jogador precisa do mod. **Não testado oficialmente**, use por sua conta e risco.
 
 ### Créditos
 
-- **HappyLooser** — Framework HL HUD System
+- **HappyLooser** — Framework HL HUD System (gentilmente autorizado a integrar — muito obrigado pela autorização!)
 - **FedAction** — Mapa NF Marsch & inspiração para o filtro armazém central
 - **LazyChilla** — Desenvolvimento do mod
 
@@ -241,23 +424,69 @@ Característica especial: Los **productos libres** se calculan automáticamente 
 
 - 🔄 **Productos libres** — Cálculo automático de lo disponible de producciones para venta/transporte
 - 📦 **Existencias** — Existencias actuales y capacidad libre por producto
+- 🔎 **Vista de almacén** — Haz clic en un producto para ver en qué almacén hay cuánto (almacén central, silos, establos, salidas de producción, etc.)
+- 🧮 **Tipos de almacén seleccionables** — Decide qué se cuenta (almacén central, silos, extensiones de silo, establos, montones de estiércol, silos zanja, almacén de objetos, salidas de producción)
 - 💰 **Mejores precios** — Mejor y máximo precio de venta por producto y mes
 - 🏭 **Valor total** — Valor de todos los productos libres por estación
 - 🗂️ **Zonas** — Agrupa productos en categorías personalizadas
+- ✏️ **Gestionar zonas** — Crea, renombra y elimina tus propias zonas
 - 🏪 **Estaciones** — Vista filtrada por estación de venta
 - ⭐ **CW only** — Mostrar solo zonas de almacén central (ideal para NF Marsch)
 - 🔍 **Búsqueda** — Búsqueda rápida de productos o estaciones
 - 🎛️ **Ajustes predef.** — Configuraciones predefinidas (Personalizado / Almacén central / Giants estándar)
 - ⏱️ **Intervalo de actualización** — Configurable (5s / 15s / 30s / 60s / 120s / manual)
+- 🌗 **Contraste/Transparencia** — Fondo de la caja en 3 niveles (claro / oscuro / transparente)
+- 📜 **Desplazamiento con rueda** — Desplaza ambas listas con la rueda del ratón
 - 🌍 **Multilingüe** — DE, EN, FR, IT, PT, ES
 
 ### Requisitos
 
 - Farming Simulator 25
 
+### Instalación
+
+1. Descarga el archivo ZIP
+2. Extráelo en tu carpeta de mods: `Documents/My Games/FarmingSimulator2025/mods/`
+3. Activa el mod en el juego
+4. **Shift+C** para mostrar/ocultar la DispoList (configurable en los ajustes)
+5. **F9 / F12** para el control con el ratón (según el ajuste del HL HUD System)
+
+### Controles
+
+| Acción | Tecla / Ratón |
+|---|---|
+| Mostrar/ocultar DispoList | `Shift + C` (configurable) |
+| Control con el ratón | `F9 / F12` (HL HUD System) |
+| Abrir el menú de ajustes | Clic en el icono de ajustes en la barra de iconos |
+| Mostrar/ocultar columnas | Menú de ajustes → «Mostrar columnas» |
+| Vista de almacén (detalle) | Clic en la fila de un producto |
+| Asignar zona | HUD de filtro → clic en el producto, luego clic en la zona de destino |
+| Crear zona | Botón «+ Neuer Bereich» — primera fila de la lista de zonas |
+| Renombrar/eliminar zona | Clic derecho en una zona → menú contextual |
+| Ordenar por valor ↔ A–Z | Clic en el icono de orden (el orden por valor pausa la actualización) |
+| Contraste/transparencia | Clic en el icono de contraste en la barra de iconos |
+| Desplazar las listas | Rueda del ratón |
+| Alternar CW only | Icono de estrella ⭐ en la barra de iconos |
+| Intervalo de actualización | Configurable en el menú de ajustes |
+
+### Menú de ajustes
+
+Un clic en el **icono de ajustes** en la barra de iconos abre el menú de ajustes — todas las opciones en un solo lugar:
+
+- **Mostrar columnas** — activa/desactiva cada columna individualmente: Existencias, Libre, Precio/1000l, Máx/1000l, Valor, Valor libre, Máx €, Máx libre, Mejor mes
+- **Búfer de producción** — ajusta con `[−]` / `[+]` cuántas horas de reserva quedan en el almacén antes de que un producto cuente como «libre» (fórmula: Existencias − Demanda/h × Búfer = cantidad libre)
+- **Tipos de almacén** — decide qué se cuenta (almacén central, silos, extensiones de silo, establos, montones de estiércol, silos zanja, almacén de objetos, salidas de producción); solo se muestran los tipos que existen realmente en tu mapa
+- **Preajuste de zonas** — «Configurar tú mismo» (sin cambios), «Cargar preajuste de almacén central» o «Cargar estándar Giants»
+
+> 💡 **Bueno saberlo:** En cuanto ordenas la lista por **valor** (clic en el icono de orden), la actualización automática se pausa y muestra «Pausado». Es intencional — de lo contrario, las filas cambiarían de lugar en cada actualización y la lista se te «escaparía». Vuelve a **A–Z** y la actualización continúa con normalidad.
+
+### Multijugador
+
+En principio compatible con MP — cada jugador necesita el mod. **No probado oficialmente**, úsalo bajo tu propia responsabilidad.
+
 ### Créditos
 
-- **HappyLooser** — Framework HL HUD System
+- **HappyLooser** — Framework HL HUD System (amablemente autorizado para la integración — ¡muchas gracias por el visto bueno!)
 - **FedAction** — Mapa NF Marsch & inspiración para el filtro almacén central
 - **LazyChilla** — Desarrollo del mod
 
