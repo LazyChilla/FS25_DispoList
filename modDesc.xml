@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<modDesc descVersion="107">
+    <title>
+        <en>Dispo List</en>
+        <de>Dispositionsliste</de>
+        <fr>Liste de Disposition</fr>
+        <it>Lista di Disposizione</it>
+        <pt>Lista de Disposição</pt>
+        <es>Lista de Disposición</es>
+    </title>
+    <description>
+        <en>DispoList - Stock overview and best prices per product. Includes filter system with zones and stations.
+Credits: HappyLooser (HL HUD System), FedAction (NF Marsch map &amp; inspiration).
+MP: Each player needs the mod. Not tested in multiplayer — use at your own risk.
+</en>
+        <de>DispoList - Lagerbestand und Bestpreise pro Ware. Mit Filtersystem nach Bereichen und Stationen.
+Credits: HappyLooser (HL HUD System), FedAction (NF Marsch Karte &amp; Inspiration).
+MP: Jeder Spieler benötigt den Mod. Nicht im Multiplayer getestet — auf eigene Gefahr.
+</de>
+        <fr>DispoList - Aperçu des stocks et meilleurs prix par produit. Système de filtres par zones et stations.
+Crédits: HappyLooser (HL HUD System), FedAction (carte NF Marsch &amp; inspiration).
+MP: Chaque joueur a besoin du mod. Non testé en multijoueur — à utiliser à vos risques.
+</fr>
+        <it>DispoList - Panoramica delle scorte e prezzi migliori per prodotto. Sistema di filtri per zone e stazioni.
+Crediti: HappyLooser (HL HUD System), FedAction (mappa NF Marsch &amp; ispirazione).
+MP: Ogni giocatore ha bisogno del mod. Non testato in multiplayer — usare a proprio rischio.
+</it>
+        <pt>DispoList - Visão geral do estoque e melhores preços por produto. Sistema de filtros por zonas e estações.
+Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch &amp; inspiração).
+MP: Cada jogador precisa do mod. Não testado em multijogador — use por sua conta e risco.
+</pt>
+        <es>DispoList - Resumen de existencias y mejores precios por producto. Sistema de filtros por zonas y estaciones.
+Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch &amp; inspiración).
+MP: Cada jugador necesita el mod. No probado en multijugador — úselo bajo su propio riesgo.
+</es>
+    </description>
+    <author>LazyChilla</author>
+    <version>1.2.2.0</version>
+    <iconFilename>icon_dispoList.dds</iconFilename>
+    <multiplayer supported="true"/>
+
+    <extraSourceFiles>
+        <sourceFile filename="hlUtils/_hlUtils.lua"/>
+        <sourceFile filename="hlHudSystem/hlHudSystem.lua"/>
+        <sourceFile filename="scripte_dl/xml/DL_Display_XmlBox.lua"/>
+        <sourceFile filename="scripte_dl/draw/DL_Display_DrawBox.lua"/>
+        <sourceFile filename="dispoList.lua"/>
+    </extraSourceFiles>
+
+    <actions>
+        <action name="HL_ONOFFMOUSECURSOR" ignoreComboMask="false" axisType="HALF" category="ONFOOT VEHICLE" />
+        <action name="DL_ONOFFDISPLAY" ignoreComboMask="false" axisType="HALF" category="ONFOOT VEHICLE"/>
+    </actions>
+
+    <inputBinding>
+        <actionBinding action="HL_ONOFFMOUSECURSOR">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_f9" axisComponent="+" neutralInput="0" index="1"/>
+        </actionBinding>
+        <actionBinding action="DL_ONOFFDISPLAY">
+            <binding device="KB_MOUSE_DEFAULT" input="KEY_lshift KEY_c" axisComponent="+" neutralInput="0" index="1"/>
+        </actionBinding>
+    </inputBinding>
+
+    <l10n>
+        <text name="input_HL_ONOFFMOUSECURSOR">
+            <en>Toggle Mouse Cursor (HL HUD System)</en>
+            <de>Mauszeiger ein/aus (HL HUD System)</de>
+            <fr>Curseur souris on/off (HL HUD System)</fr>
+            <it>Cursore mouse on/off (HL HUD System)</it>
+            <pt>Cursor do rato on/off (HL HUD System)</pt>
+            <es>Cursor ratón on/off (HL HUD System)</es>
+        </text>
+        <text name="input_DL_ONOFFDISPLAY">
+            <en>Toggle Dispo List</en>
+            <de>Dispositionsliste ein/aus</de>
+            <fr>Afficher/masquer DispoList</fr>
+            <it>Mostra/nascondi DispoList</it>
+            <pt>Mostrar/ocultar DispoList</pt>
+            <es>Mostrar/ocultar DispoList</es>
+        </text>
+    </l10n>
+</modDesc>
