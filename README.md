@@ -1,4 +1,4 @@
-# FS25 DispoList# FS25 DispoList
+# FS25 DispoList#
 
 **🇩🇪 [Deutsch](#deutsch)** | **🇬🇧 [English](#english)** | **🇫🇷 [Français](#français)** | **🇮🇹 [Italiano](#italiano)** | **🇵🇹 [Português](#português)** | **🇪🇸 [Español](#español)**
 
