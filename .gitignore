@@ -9,3 +9,5 @@ log.txt
 Thumbs.db
 desktop.ini
 .DS_Store
+
+*.zip
