@@ -1,0 +1,11 @@
+﻿# Fertige Mod-Pakete gehoeren NICHT ins Repo - nur als Release-Download
+*.zip
+*.7z
+*.rar
+log.txt
+*.log
+*.tmp
+*.bak
+Thumbs.db
+desktop.ini
+.DS_Store
