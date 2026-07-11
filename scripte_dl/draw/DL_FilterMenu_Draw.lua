@@ -559,6 +559,9 @@ function DL_FilterMenu_Draw.setBox(args)
                                     DispoList.BEREICHE[fcm.bereich] = nil
                                     DL_Filter.bereichZuordnung[result] = DL_Filter.bereichZuordnung[fcm.bereich]
                                     DL_Filter.bereichZuordnung[fcm.bereich] = nil
+                                    -- Cache der automatischen Vorgabe-Zuordnung neu bauen -- sonst zeigen
+                                    -- automatisch (nicht manuell) zugeordnete Waren weiter auf den alten Namen
+                                    DispoList.buildFillTypeToBereich()
                                     -- Kein eager save mehr -- zentral ueber ItemSystem.save-Hook
                                     DL_FilterMenu_Draw._remainingCache = nil
                                     if DispoList.filterSelBereich == fcm.bereich then
@@ -1221,7 +1224,7 @@ function DL_FilterMenu_Draw.drawStationMode(x, y, w, h, col2X, colW, listStart, 
         if station:isa(SellingStation) and not station.hideFromPricesMenu then
             if station:getName() == DispoList.filterSelStation then
                 for ftIdx, accepted in pairs(station.acceptedFillTypes) do
-                    if accepted == true then
+                    if DL_Filter.isAcceptedByStation(station, ftIdx) then
                         local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
                         if ft ~= nil then stationFTSet[ft.name] = ft.title or ft.name end
                     end
@@ -1263,18 +1266,20 @@ function DL_FilterMenu_Draw.drawStationMode(x, y, w, h, col2X, colW, listStart, 
             end
             local allFT2 = DL_FilterMenu_Draw.getAllMapFillTypes()
             for _, item in ipairs(allFT2) do
-                if not alleZugeordnet[item.ftName] then
+                if not alleZugeordnet[item.ftName] and stationFTSet[item.ftName] ~= nil then
                     table.insert(berFTs, {ftName=item.ftName, title=item.title})
                 end
             end
         else
             if zuordnung ~= nil then
                 for ftName, _ in pairs(zuordnung) do
-                    local ft = g_fillTypeManager:getFillTypeByName(ftName)
-                    local title = stationFTSet[ftName]
-                           or (ft ~= nil and (ft.title or ft.name))
-                           or ftName
-                    table.insert(berFTs, {ftName=ftName, title=title})
+                    if stationFTSet[ftName] ~= nil then
+                        local ft = g_fillTypeManager:getFillTypeByName(ftName)
+                        local title = stationFTSet[ftName]
+                               or (ft ~= nil and (ft.title or ft.name))
+                               or ftName
+                        table.insert(berFTs, {ftName=ftName, title=title})
+                    end
                 end
             end
         end
@@ -1418,7 +1423,7 @@ function DL_FilterMenu_Draw.getAllMapFillTypes()
         if station:isa(SellingStation) and not station.hideFromPricesMenu then
             if station.ownerFarmId ~= g_currentMission:getFarmId() then
                 for ftIdx, accepted in pairs(station.acceptedFillTypes) do
-                    if accepted == true and not seen[ftIdx] then
+                    if DL_Filter.isAcceptedByStation(station, ftIdx) and not seen[ftIdx] then
                         seen[ftIdx] = true
                         local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
                         if ft ~= nil and ft.name ~= nil then
@@ -1459,8 +1464,8 @@ function DL_FilterMenu_Draw.buildStationList()
                 -- Nur Stationen mit mindestens einem echten FillType aufnehmen
                 local hasft = false
                 if station.acceptedFillTypes ~= nil then
-                    for _, acc in pairs(station.acceptedFillTypes) do
-                        if acc == true then hasft = true; break end
+                    for ftIdx, acc in pairs(station.acceptedFillTypes) do
+                        if DL_Filter.isAcceptedByStation(station, ftIdx) then hasft = true; break end
                     end
                 end
                 if hasft then
@@ -1570,6 +1575,10 @@ function DL_FilterMenu_Draw.loescheBereich(bereichName)
     if DL_Filter.bereichZuordnung ~= nil then
         DL_Filter.bereichZuordnung[bereichName] = nil
     end
+
+    -- Cache der automatischen Vorgabe-Zuordnung neu bauen -- sonst zeigen
+    -- automatisch (nicht manuell) zugeordnete Waren weiter auf den geloeschten Namen
+    DispoList.buildFillTypeToBereich()
 
     -- 3. Selektion zurücksetzen
     DispoList.filterSelBereich = nil

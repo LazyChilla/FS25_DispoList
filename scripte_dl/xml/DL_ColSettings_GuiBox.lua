@@ -173,6 +173,50 @@ function DL_ColSettings:createGuiBox()
             end
         end
 
+        -- ── ZL-Gebaeude-Checkboxen (dynamisch, Anzahl pro Save unterschiedlich) ──
+        -- Stabile Reihenfolge: alphabetisch sortierte Namensliste, per Index
+        -- referenziert (Namen selbst koennen Leerzeichen/Umlaute haben, taugen
+        -- nicht direkt als seq-String).
+        local function dlSortedZlGebaeudeNames()
+            local names = {}
+            for name, _ in pairs(DispoList.foundZlGebaeude or {}) do
+                table.insert(names, name)
+            end
+            table.sort(names)
+            return names
+        end
+        if seq == "dl_spacer_zlgeb_" then
+            return { typ="headline", text={[1]={text=" ", color="columText1"}} }
+        end
+        if seq == "dl_zlgeb_headline_" then
+            return { typ="headline", text={[1]={text=DL_t("set_zlgebaeude"), color="columText1"}} }
+        end
+        if seq:sub(1, 9) == "dl_zlgeb_" and seq ~= "dl_zlgeb_headline_" then
+            local idxStr = seq:match("^dl_zlgeb_(%d+)_$")
+            local idx = idxStr and tonumber(idxStr)
+            if idx ~= nil then
+                local names = dlSortedZlGebaeudeNames()
+                local gebName = names[idx]
+                if gebName == nil then return nil end
+                local isActive = DispoList.activeZlGebaeude and (DispoList.activeZlGebaeude[gebName] ~= false)
+                return {
+                    oneClick = true,
+                    typ      = "boolean",
+                    text     = { [1] = { text=(isActive and "[v] " or "[ ] ") .. gebName,
+                                         color = isActive and "activeGreen" or "columText1" } },
+                    onClick  = function(clickArgs)
+                        if clickArgs == nil or not clickArgs.isDown then return end
+                        local now = g_currentMission.time or 0
+                        if DispoList.dlClickCooldown ~= nil and now - DispoList.dlClickCooldown < 400 then return end
+                        DispoList.dlClickCooldown = now
+                        DispoList.activeZlGebaeude[gebName] = not (DispoList.activeZlGebaeude[gebName] ~= false)
+                        DispoList:refreshDispoTable()
+                        DL_ColSettings.guiBox = nil  -- erzwingt Rebuild beim nächsten Öffnen
+                    end,
+                }
+            end
+        end
+
         -- ── Preset-Sektion ────────────────────────────────────────────────────
         if seq == "dl_preset_headline_" then
             return { typ="headline", text={[1]={text=DL_t("set_bereiche_preset"), color="columText1"}} }
@@ -355,6 +399,23 @@ function DL_ColSettings:createGuiBox()
         for _, key in ipairs(lagerKeys) do
             if DispoList.foundLagertypen and DispoList.foundLagertypen[key] then
                 gb:addLine({ lineCallSequence="dl_lager_" .. key .. "_" })
+            end
+        end
+    end
+
+    -- ZL-Gebaeude-Sektion: nur zeigen wenn mehr als ein ZL-Gebaeude existiert
+    -- (bei nur einem Gebaeude gibt's ja nichts zum Auswaehlen)
+    do
+        local zlNames = {}
+        for name, _ in pairs(DispoList.foundZlGebaeude or {}) do
+            table.insert(zlNames, name)
+        end
+        if #zlNames > 1 then
+            table.sort(zlNames)
+            gb:addLine({ lineCallSequence="dl_spacer_zlgeb_" })
+            gb:addLine({ lineCallSequence="dl_zlgeb_headline_" })
+            for i = 1, #zlNames do
+                gb:addLine({ lineCallSequence="dl_zlgeb_" .. i .. "_" })
             end
         end
     end

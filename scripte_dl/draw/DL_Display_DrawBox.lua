@@ -18,7 +18,7 @@ function DL_Display_DrawBox.setBox(args)
     local box = g_currentMission.hlHudSystem.box[args.typPos]
     if box == nil then return end
 
-    if DispoList.CurrentItems == nil or #DispoList.CurrentItems == 0 then
+    if DispoList.DisplayItems == nil or #DispoList.DisplayItems == 0 then
         DispoList:refreshDispoTable()
     end
 
@@ -129,7 +129,7 @@ function DL_Display_DrawBox.setBox(args)
     local totalLines = 0
     local lastStation = nil
     local lastBereich = nil
-    for _, e in ipairs(DispoList.CurrentItems) do
+    for _, e in ipairs(DispoList.DisplayItems) do
         if (e.stockLevel or 0) >= 1 then
             -- Stationsheader: Leerzeile + Header = 2 Zeilen
             if e.stationName ~= lastStation then
@@ -499,7 +499,7 @@ function DL_Display_DrawBox.setBox(args)
         deltaMsg = "+" .. DispoList.deltaNewCount .. DL_t("hint_neue_waren")
     elseif DispoList._zlFilterEmpty then
         deltaMsg = DL_t("hint_zl_empty")
-    elseif DispoList.CurrentItems == nil or #DispoList.CurrentItems == 0 then
+    elseif DispoList.DisplayItems == nil or #DispoList.DisplayItems == 0 then
         -- Warenliste komplett leer: Lagertyp-Hinweis nur wenn ein GEFUNDENER Typ ausgeschaltet ist,
         -- sonst ehrliches "kein Bestand" (kein irrefuehrender Lager-Tipp wenn eh alle an sind)
         local anyLagerOff = false
@@ -598,7 +598,7 @@ function DL_Display_DrawBox.setBox(args)
     -- Kein-Zentrallager Hinweis (Multiplayer Client) — nur einmal bis User Box schliesst
     if not DispoList.zlHinweisGesehen
        and DispoList.foundZentrallager ~= nil and DispoList.foundZentrallager == 0
-       and #DispoList.CurrentItems < 10 then
+       and #DispoList.DisplayItems < 10 then
         setTextColor(1.0, 0.75, 0.0, 1)
         setTextAlignment(RenderText.ALIGN_LEFT)
         renderText(x + difW, nextPosY, size * 0.9,
@@ -611,7 +611,7 @@ function DL_Display_DrawBox.setBox(args)
     local drawLastStation = nil
     local drawLastBereich = nil
 
-    for _, e in ipairs(DispoList.CurrentItems) do
+    for _, e in ipairs(DispoList.DisplayItems) do
         local stockLevel = e.stockLevel or 0
         if stockLevel >= 1 then
             local stName = e.stationName or ""

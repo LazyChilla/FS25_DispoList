@@ -35,7 +35,7 @@ MP: Cada jugador necesita el mod. No probado en multijugador — úselo bajo su 
 </es>
     </description>
     <author>LazyChilla</author>
-    <version>1.2.2.0</version>
+    <version>1.2.5.1</version>
     <iconFilename>icon_dispoList.dds</iconFilename>
     <multiplayer supported="true"/>
 

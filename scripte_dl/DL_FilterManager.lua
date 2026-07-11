@@ -13,6 +13,20 @@ DL_Filter.presetDialogShown  = false  -- persistent: Erststart-Dialog wurde bere
 DL_Filter.userPersonalized   = false  -- persistent: Spieler hat manuell FillTypes verschoben
 DL_Filter.activePreset       = ""     -- persistent: "ZL", "GIANTS", "SELBST", "" = noch nicht gewählt
 
+-- Zentrale Prüfung: akzeptiert diese Station eine bestimmte Ware?
+-- Heute nur echte Vanilla-Pruefung (station.acceptedFillTypes laut Placeable-XML).
+-- Bewusst als EINE zentrale Stelle gebaut: wenn der geplante DL_TriggerEditor
+-- kommt (Stationen sollen dann auch Waren annehmen koennen, die ihre XML gar
+-- nicht kennt), reicht es diese eine Funktion um den Override-Check zu erweitern,
+-- statt an jeder der vier Fundstellen im Code einzeln nachzuruesten.
+function DL_Filter.isAcceptedByStation(station, ftIdx)
+    if station == nil or ftIdx == nil or station.acceptedFillTypes == nil then return false end
+    if station.acceptedFillTypes[ftIdx] == true then return true end
+    -- TODO (DL_TriggerEditor, noch nicht gebaut): hier zusaetzlich pruefen ob
+    -- der Spieler diese Station manuell um diese Ware erweitert hat.
+    return false
+end
+
 -- FS25 FillType-Kategorien (für Kategorie-Buttons im Menü)
 -- Kategorie-Buttons = unsere eigenen BEREICHE
 DL_Filter.KATEGORIEN = {
@@ -536,7 +550,7 @@ function DL_Filter:deltaAssignFillTypes()
             if station:isa(SellingStation) and not station.hideFromPricesMenu then
                 if station.ownerFarmId ~= g_currentMission:getFarmId() then
                     for ftIdx, accepted in pairs(station.acceptedFillTypes) do
-                        if accepted == true then
+                        if DL_Filter.isAcceptedByStation(station, ftIdx) then
                             local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
                             if ft ~= nil and ft.name ~= nil then
                                 mapFillTypes[ft.name] = ftIdx
@@ -662,6 +676,17 @@ function DL_Filter:savePauseSetting()
             setXMLBool(xml, "dispoListSettings.lagertypen." .. key .. "#active", val ~= false)
         end
     end
+    -- ZL-Gebaeude-Auswahl fuer Stern/CW-Filter speichern (Namen als Attribut,
+    -- nicht als Tag-Name -- Gebaeudenamen koennen Leerzeichen/Umlaute haben)
+    if DispoList.activeZlGebaeude ~= nil then
+        local zi = 0
+        for name, val in pairs(DispoList.activeZlGebaeude) do
+            local base = string.format("dispoListSettings.zlGebaeude.geb(%d)", zi)
+            setXMLString(xml, base .. "#name",   name)
+            setXMLBool(xml,   base .. "#active", val ~= false)
+            zi = zi + 1
+        end
+    end
     -- Spalten-Sichtbarkeit speichern
     if DL_ColSettings ~= nil then
         local i = 0
@@ -697,6 +722,20 @@ function DL_Filter:loadPauseSetting()
         local xmlKey = "dispoListSettings.lagertypen." .. key .. "#active"
         if hasXMLProperty(xml, xmlKey) then
             DispoList.activeLagertypen[key] = getXMLBool(xml, xmlKey)
+        end
+    end
+    -- ZL-Gebaeude-Auswahl laden
+    do
+        local zi = 0
+        while true do
+            local base = string.format("dispoListSettings.zlGebaeude.geb(%d)", zi)
+            if not hasXMLProperty(xml, base) then break end
+            local name   = getXMLString(xml, base .. "#name")
+            local active = getXMLBool(xml,   base .. "#active")
+            if name ~= nil then
+                DispoList.activeZlGebaeude[name] = (active ~= false)
+            end
+            zi = zi + 1
         end
     end
 

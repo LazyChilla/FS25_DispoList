@@ -11,6 +11,7 @@ DispoList.timePast       = 0
 DispoList.refreshInterval  = 5000 -- ms: 5000/15000/30000/60000/120000/0=manuell (Default: 5 Sekunden)
 DispoList.refreshSinceMs   = 0     -- ms seit letztem Refresh (für Countdown-Anzeige)
 DispoList.CurrentItems = {}
+DispoList.DisplayItems = {}
 DispoList.modDir = g_currentModDirectory
 DispoList.searchActive = false
 DispoList.searchText   = ""
@@ -56,11 +57,6 @@ DispoList.BEREICHE_DEFAULT = {
     ["Unverkaeuflich"] = { order=99 },  -- geschützt, nicht in Hauptliste
 }
 
--- ZL-Filter: nur diese Bereiche anzeigen wenn "nur ZL"-Button aktiv
--- Erweiterbar wenn FedAction neue ZL-Lager baut (z.B. 16x-Karte)
-DispoList.ZL_BEREICHE_FILTER = {
-    "Fluessig", "Kuehlung", "Lebensmittel", "ObstGemuese", "Werkstoffe"
-}
 DispoList._zlFilterActive = false  -- Toggle: nur ZL-Bereiche anzeigen
 
 -- Erweitertes Preset: NF Marsch / Karten mit Zentrallager (aus v97x)
@@ -83,7 +79,7 @@ DispoList.BEREICHE_PRESET_ERWEITERT = {
 -- BEREICHE: wird zur Laufzeit von loadBereiche() aufgebaut — NICHT hardcoded
 DispoList.BEREICHE         = {}
 DispoList.BEREICHE_DELETED = {}  -- Blacklist: gelöschte Bereiche
-DispoList.VERSION          = "v1.2.2.0"-- Build-Version (in Icon-Zeile angezeigt)
+DispoList.VERSION          = "v1.2.5.1"-- Build-Version (in Icon-Zeile angezeigt)
 
 -- ─── Lokalisierung ───────────────────────────────────────────────────────────
 local DL_L10N = {
@@ -127,6 +123,7 @@ local DL_L10N = {
     set_fabrik_puffer  = {de="Fabrik-Puffer: ",en="Production buffer: ",fr="Tampon de production: ",it="Buffer di produzione: ",pt="Buffer de producao: ",es="Bufer de produccion: "},
     set_puffer_formel  = {de="Bestand - (Bedarf/h x Puffer) = Freie Menge",en="Stock - (demand/h x buffer) = free amount",fr="Stock - (besoin/h x tampon) = quantite libre",it="Scorte - (fabbisogno/h x buffer) = quantita libera",pt="Estoque - (procura/h x buffer) = quantidade livre",es="Existencias - (demanda/h x bufer) = cantidad libre"},
     set_lagertypen     = {de="Lagertypen (was wird gezaehlt)",en="Storage types (what is counted)",fr="Types de stockage (ce qui est compte)",it="Tipi di deposito (cosa viene conteggiato)",pt="Tipos de armazenamento (o que e contado)",es="Tipos de almacen (que se cuenta)"},
+    set_zlgebaeude      = {de="Zentrallager-Gebaeude (fuer Stern/CW-Filter)",en="Central warehouse buildings (for star/CW filter)",fr="Batiments entrepot central (filtre etoile/CW)",it="Edifici magazzino centrale (filtro stella/CW)",pt="Edificios armazem central (filtro estrela/CW)",es="Edificios almacen central (filtro estrella/CW)"},
     set_bereiche_preset= {de="Bereiche-Preset",en="Zone preset",fr="Preset de zones",it="Preset zone",pt="Predefinicao de zonas",es="Preajuste de zonas"},
     set_selbst         = {de="Selbst einrichten (keine Aenderung)",en="Set up yourself (no change)",fr="Configurer soi-meme (aucun changement)",it="Configura da solo (nessuna modifica)",pt="Configurar por si (sem alteracoes)",es="Configurar tu mismo (sin cambios)"},
     set_zl_laden       = {de="Zentrallager-Preset laden",en="Load central warehouse preset",fr="Charger le preset entrepot central",it="Carica preset magazzino centrale",pt="Carregar predefinicao armazem central",es="Cargar preajuste almacen central"},
@@ -234,6 +231,11 @@ DispoList.activeLagertypen = {
     PALLET          = true,
     PRODUCTION_OUT  = true,   -- Fabrik-Ausgangslager (NEU)
 }
+-- Welche ZL-Gebaeude auf der Karte gefunden wurden (wird beim Scan befuellt)
+DispoList.foundZlGebaeude = {}
+-- Welche ZL-Gebaeude beim Stern/CW-Filter zaehlen sollen (Name -> true/false,
+-- gespeichert in settings.xml). Fehlt ein Eintrag: Default AN.
+DispoList.activeZlGebaeude = {}
 DispoList.FILLTYPE_TO_BEREICH = {}
 function DispoList.buildFillTypeToBereich()
     DispoList.FILLTYPE_TO_BEREICH = {}
@@ -393,6 +395,7 @@ function DispoList:refreshDispoTable()
     if not ok then
         print("## DispoList ERROR refreshDispoTable: " .. tostring(err))
         DispoList.CurrentItems = {}
+        DispoList.DisplayItems = {}
     end
 end
 function DispoList:_refreshDispoTableInner()
@@ -401,36 +404,49 @@ function DispoList:_refreshDispoTableInner()
     local myFarmId        = g_currentMission:getFarmId()
     local priceMultiplier = EconomyManager.getPriceMultiplier()
     local stockLevels     = {}
+    local allStockLevels  = {}  -- Gesamtbestand UNABHAENGIG von Lagertyp-Einstellungen (fuer Export/g_farmCore)
+    local zlStockLevels    = {}  -- Nur der ZL-Anteil pro FillType (fuer Stern/CW-Filter)
 
     local act = DispoList.activeLagertypen or {}
+    local activeZlGeb = DispoList.activeZlGebaeude or {}
     local zlStorages = {}  -- ZL-Storages nicht doppelt zählen
     local countedProdStorages = {}  -- Fabrik-Output nicht doppelt zählen
     local foundZentrallager = 0
+    DispoList.foundZlGebaeude = {}  -- welche ZL-Gebaeude gibt's ueberhaupt (fuer Settings-Liste)
 
     -- ── Zentrallager ─────────────────────────────────────────────────────────
-    if act.ZENTRALLAGER then
-        for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do
-            if placeable.ownerFarmId == myFarmId then
-                local zlSpec = nil
-                for key, val in pairs(placeable) do
-                    if type(key) == "string" and type(val) == "table" then
-                        if key:find("extendedProductionPoint") or key:find("ExtendedProductionPoint") then
-                            zlSpec = val; break
-                        end
+    for _, placeable in ipairs(g_currentMission.placeableSystem.placeables) do
+        if placeable.ownerFarmId == myFarmId then
+            local zlSpec = nil
+            for key, val in pairs(placeable) do
+                if type(key) == "string" and type(val) == "table" then
+                    if key:find("extendedProductionPoint") or key:find("ExtendedProductionPoint") then
+                        zlSpec = val; break
                     end
                 end
-                if zlSpec ~= nil and zlSpec.productionPoint ~= nil then
-                    local pp = zlSpec.productionPoint
-                    if pp.storage ~= nil and pp.storage.fillLevels ~= nil and not zlStorages[pp.storage] then
-                        zlStorages[pp.storage] = true
-                        foundZentrallager = foundZentrallager + 1
-                        for idx, lvl in pairs(pp.storage.fillLevels) do
-                            if lvl > 0 then stockLevels[idx] = (stockLevels[idx] or 0) + lvl end
+            end
+            if zlSpec ~= nil and zlSpec.productionPoint ~= nil then
+                local pp = zlSpec.productionPoint
+                if pp.storage ~= nil and pp.storage.fillLevels ~= nil and not zlStorages[pp.storage] then
+                    zlStorages[pp.storage] = true
+                    foundZentrallager = foundZentrallager + 1
+                    local gebName = placeable:getName() or "?"
+                    DispoList.foundZlGebaeude[gebName] = true
+                    local gebActive = (activeZlGeb[gebName] ~= false)  -- Default AN, neue Gebaeude nicht ueberraschend ausblenden
+                    for idx, lvl in pairs(pp.storage.fillLevels) do
+                        if lvl > 0 then
+                            allStockLevels[idx] = (allStockLevels[idx] or 0) + lvl
+                            if act.ZENTRALLAGER then
+                                stockLevels[idx]   = (stockLevels[idx] or 0) + lvl
+                                if gebActive then
+                                    zlStockLevels[idx] = (zlStockLevels[idx] or 0) + lvl
+                                end
+                            end
                         end
-                        -- Fabrik-Output des ZL wird hier erfasst (verhindert Doppelzählung)
-                        if pp.outputFillTypeIdsArray ~= nil then
-                            countedProdStorages[pp.storage] = true
-                        end
+                    end
+                    -- Fabrik-Output des ZL wird hier erfasst (verhindert Doppelzählung)
+                    if pp.outputFillTypeIdsArray ~= nil then
+                        countedProdStorages[pp.storage] = true
                     end
                 end
             end
@@ -438,7 +454,7 @@ function DispoList:_refreshDispoTableInner()
     end
 
     -- ── Fabrik-Output (normale Fabriken, nicht ZL) ────────────────────────────
-    if act.PRODUCTION_OUT and g_currentMission.productionChainManager ~= nil then
+    if g_currentMission.productionChainManager ~= nil then
         for _, prod in ipairs(g_currentMission.productionChainManager.productionPoints) do
             if prod:getOwnerFarmId() == myFarmId then
                 local st = prod.storage
@@ -448,7 +464,10 @@ function DispoList:_refreshDispoTableInner()
                         for _, ftIdx in ipairs(prod.outputFillTypeIdsArray) do
                             local ok, lvl = pcall(function() return prod.storage:getFillLevel(ftIdx) end)
                             if ok and lvl ~= nil and lvl > 0 then
-                                stockLevels[ftIdx] = (stockLevels[ftIdx] or 0) + math.floor(lvl)
+                                allStockLevels[ftIdx] = (allStockLevels[ftIdx] or 0) + math.floor(lvl)
+                                if act.PRODUCTION_OUT then
+                                    stockLevels[ftIdx] = (stockLevels[ftIdx] or 0) + math.floor(lvl)
+                                end
                             end
                         end
                     end
@@ -471,9 +490,12 @@ function DispoList:_refreshDispoTableInner()
 
     -- ── Rohwaren: Silos, Tierhaltung, Ballen, Paletten ───────────────────────
     -- Alle Bestände addieren (ZL-Storages werden übersprungen via zlStorages-Set)
-    local function addRohware(idx, lvl)
+    local function addRohware(idx, lvl, active)
         if idx ~= nil and lvl ~= nil and lvl > 0 then
-            stockLevels[idx] = (stockLevels[idx] or 0) + lvl
+            allStockLevels[idx] = (allStockLevels[idx] or 0) + lvl
+            if active then
+                stockLevels[idx] = (stockLevels[idx] or 0) + lvl
+            end
         end
     end
 
@@ -483,30 +505,30 @@ function DispoList:_refreshDispoTableInner()
         local mine = placeable.ownerFarmId == myFarmId or placeable.ownerFarmId == 0
 
         -- Silos (spec_silo)
-        if act.SILO and placeable.spec_silo ~= nil and mine then
+        if placeable.spec_silo ~= nil and mine then
             for _, st in ipairs(placeable.spec_silo.storages or {}) do
                 if not zlStorages[st] and not countedRwStorages[st] then
                     countedRwStorages[st] = true
                     if st.fillLevels ~= nil then
-                        for idx, lvl in pairs(st.fillLevels) do addRohware(idx, lvl) end
+                        for idx, lvl in pairs(st.fillLevels) do addRohware(idx, lvl, act.SILO) end
                     end
                 end
             end
         end
 
         -- SiloExtension
-        if act.SILO_EXTENSION and placeable.spec_siloExtension ~= nil and mine then
+        if placeable.spec_siloExtension ~= nil and mine then
             local st = placeable.spec_siloExtension.storage
             if st ~= nil and not zlStorages[st] and not countedRwStorages[st] then
                 countedRwStorages[st] = true
                 if st.fillLevels ~= nil then
-                    for idx, lvl in pairs(st.fillLevels) do addRohware(idx, lvl) end
+                    for idx, lvl in pairs(st.fillLevels) do addRohware(idx, lvl, act.SILO_EXTENSION) end
                 end
             end
         end
 
         -- Tierhaltung
-        if act.HUSBANDRY and placeable.spec_husbandry ~= nil and placeable.ownerFarmId == myFarmId then
+        if placeable.spec_husbandry ~= nil and placeable.ownerFarmId == myFarmId then
             local st = placeable.spec_husbandry.storage
             if st ~= nil and not zlStorages[st] and not countedRwStorages[st] then
                 countedRwStorages[st] = true
@@ -514,7 +536,7 @@ function DispoList:_refreshDispoTableInner()
                 if st.fillLevels ~= nil then
                     for idx, lvl in pairs(st.fillLevels) do
                         if ls == nil or ls.supportedFillTypes == nil or ls.supportedFillTypes[idx] then
-                            addRohware(idx, lvl)
+                            addRohware(idx, lvl, act.HUSBANDRY)
                         end
                     end
                 end
@@ -522,18 +544,18 @@ function DispoList:_refreshDispoTableInner()
         end
 
         -- Misthaufen
-        if act.MANURE and placeable.spec_manureHeap ~= nil and mine then
+        if placeable.spec_manureHeap ~= nil and mine then
             local heap = placeable.spec_manureHeap.manureHeap
             if heap ~= nil and not countedRwStorages[heap] then
                 countedRwStorages[heap] = true
                 if heap.fillLevels ~= nil then
-                    for idx, lvl in pairs(heap.fillLevels) do addRohware(idx, lvl) end
+                    for idx, lvl in pairs(heap.fillLevels) do addRohware(idx, lvl, act.MANURE) end
                 end
             end
         end
 
         -- Fahrsilo (BunkerSilo)
-        if act.BUNKER and placeable.spec_bunkerSilo ~= nil and mine then
+        if placeable.spec_bunkerSilo ~= nil and mine then
             local ok, err = pcall(function()
                 local bs = placeable.spec_bunkerSilo.bunkerSilo
                 if bs ~= nil then
@@ -543,7 +565,7 @@ function DispoList:_refreshDispoTableInner()
                         ftIdx = bs.outputFillType
                     end
                     if fillLevel > 0 and ftIdx ~= nil and type(ftIdx) == "number" then
-                        addRohware(ftIdx, fillLevel)
+                        addRohware(ftIdx, fillLevel, act.BUNKER)
                     end
                 end
             end)
@@ -551,7 +573,7 @@ function DispoList:_refreshDispoTableInner()
         end
 
         -- Objektlager (Ballen/Paletten in Lagerhallen — spec_objectStorage)
-        if act.OBJEKTLAGER and placeable.spec_objectStorage ~= nil and mine then
+        if placeable.spec_objectStorage ~= nil and mine then
             local ok, err = pcall(function()
                 local objInfos = placeable.spec_objectStorage.objectInfos
                 if objInfos ~= nil then
@@ -571,7 +593,7 @@ function DispoList:_refreshDispoTableInner()
                                     lvl   = obj.palletAttributes.fillLevel * objectInfo.numObjects
                                 end
                                 if ftIdx ~= nil and type(ftIdx) == "number" and lvl > 0 then
-                                    addRohware(ftIdx, lvl)
+                                    addRohware(ftIdx, lvl, act.OBJEKTLAGER)
                                 end
                             else
                                 for _, obj in ipairs(objectInfo.objects) do
@@ -590,7 +612,7 @@ function DispoList:_refreshDispoTableInner()
                                         lvl   = obj.palletAttributes.fillLevel
                                     end
                                     if ftIdx ~= nil and type(ftIdx) == "number" and lvl > 0 then
-                                        addRohware(ftIdx, lvl)
+                                        addRohware(ftIdx, lvl, act.OBJEKTLAGER)
                                     end
                                 end
                             end
@@ -602,19 +624,19 @@ function DispoList:_refreshDispoTableInner()
         end
 
         -- Bienenstock
-        if act.BEEHIVE and placeable.spec_beehivePalletSpawner ~= nil and placeable.ownerFarmId == myFarmId then
+        if placeable.spec_beehivePalletSpawner ~= nil and placeable.ownerFarmId == myFarmId then
             addRohware(placeable.spec_beehivePalletSpawner.fillType,
-                       placeable.spec_beehivePalletSpawner.pendingLiters)
+                       placeable.spec_beehivePalletSpawner.pendingLiters, act.BEEHIVE)
         end
     end
 
     -- Fahrzeuge: Paletten
-    if act.PALLET and g_currentMission.vehicleSystem ~= nil then
+    if g_currentMission.vehicleSystem ~= nil then
         for _, v in ipairs(g_currentMission.vehicleSystem.vehicles) do
             if v.isPallet and (v.ownerFarmId == myFarmId or v.ownerFarmId == 0) then
                 if v.spec_fillUnit ~= nil and v.spec_fillUnit.fillUnits ~= nil then
                     for _, fu in ipairs(v.spec_fillUnit.fillUnits) do
-                        addRohware(fu.fillType, fu.fillLevel)
+                        addRohware(fu.fillType, fu.fillLevel, act.PALLET)
                     end
                 end
             end
@@ -622,12 +644,12 @@ function DispoList:_refreshDispoTableInner()
     end
 
     -- Ballen auf der Karte
-    if act.BALE and g_currentMission.itemSystem ~= nil and g_currentMission.itemSystem.items ~= nil then
+    if g_currentMission.itemSystem ~= nil and g_currentMission.itemSystem.items ~= nil then
         for _, item in pairs(g_currentMission.itemSystem.items) do
             local bale = (type(item) == "table" and item.item) and item.item or item
             if bale ~= nil and bale.isa ~= nil and bale:isa(Bale) then
                 if bale.ownerFarmId == myFarmId or bale.ownerFarmId == 0 then
-                    addRohware(bale.fillType, bale.fillLevel)
+                    addRohware(bale.fillType, bale.fillLevel, act.BALE)
                 end
             end
         end
@@ -648,7 +670,7 @@ function DispoList:_refreshDispoTableInner()
             local isOwnStation = station.ownerFarmId == myFarmId and station.ownerFarmId ~= 0
             if not isOwnStation then
                 for ft, ok in pairs(station.acceptedFillTypes) do
-                    if ok == true and stockLevels[ft] ~= nil then
+                    if ok == true and allStockLevels[ft] ~= nil then
                         -- getEffectiveFillTypePrice() liefert bereits den fertigen, tatsächlich gezahlten
                         -- Preis inkl. Schwierigkeitsgrad-Faktor -> NICHT nochmal mit priceMultiplier multiplizieren
                         -- (siehe TSStockCheck als Referenz, Zeile 238: kein priceMultiplier hier)
@@ -669,7 +691,7 @@ function DispoList:_refreshDispoTableInner()
                     xmlFile:iterate("placeable.sellingStation.fillType", function(_, fillTypeKey)
                         local ftName = xmlFile:getValue(fillTypeKey .. "#name")
                         local ftIdx  = ftName ~= nil and g_fillTypeManager:getFillTypeIndexByName(ftName) or nil
-                        if ftIdx ~= nil and stockLevels[ftIdx] ~= nil then
+                        if ftIdx ~= nil and allStockLevels[ftIdx] ~= nil then
                             local priceScale = xmlFile:getValue(fillTypeKey .. "#priceScale", 1)
                             if bestPriceScale[ftIdx] == nil or priceScale > bestPriceScale[ftIdx] then
                                 bestPriceScale[ftIdx] = priceScale
@@ -685,8 +707,12 @@ function DispoList:_refreshDispoTableInner()
     local demandPerHour = DispoList:getProductionDemandPerHour()
 
     -- Finale Liste
+    -- WICHTIG: Basis ist allStockLevels (Gesamtbestand, unabhaengig von Lagertyp-
+    -- Einstellungen) -- so sieht der Export (CurrentItems) immer den kompletten
+    -- Betrieb. activeStock traegt zusaetzlich den Anteil, der laut Einstellungen
+    -- zaehlt -- nur DEN nutzt die HUD-Anzeige (DisplayItems) weiter unten.
     local entries = {}
-    for idx, lvl in pairs(stockLevels) do
+    for idx, lvl in pairs(allStockLevels) do
         if lvl > 0 and bestStation[idx] ~= nil then
             local ft = g_fillTypeManager:getFillTypeByIndex(idx)
             if ft ~= nil then
@@ -708,6 +734,8 @@ function DispoList:_refreshDispoTableInner()
                     icon          = ft.hudOverlayFilename,
                     stockLevel    = lvl,
                     sellable      = sellable,
+                    activeStock   = stockLevels[idx] or 0,  -- Anteil laut Lagertyp-Einstellungen (fuer HUD)
+                    zlStock       = zlStockLevels[idx] or 0,
                     demandPerHour = demandLph,
                     stationName   = bestStation[idx].stationName,
                     price         = bestStation[idx].price,
@@ -788,28 +816,58 @@ function DispoList:_refreshDispoTableInner()
         entries = filtered
     end
 
-    -- ZL-Filter: nur ZL-Bereiche anzeigen wenn aktiv
-    if DispoList._zlFilterActive then
-        local zlSet = {}
-        for _, name in ipairs(DispoList.ZL_BEREICHE_FILTER or {}) do
-            zlSet[name] = true
+    -- ── Gesamt-Datensatz für Export (g_farmCore) ──────────────────────────────
+    -- entries basiert auf allStockLevels (Gesamtbestand, siehe oben) -- FarmAssistant
+    -- & Co. sehen also immer den KOMPLETTEN Betrieb, unabhaengig von Lagertyp-
+    -- Einstellungen und vom Stern/CW-Filter im HUD.
+    DispoList.CurrentItems = entries
+
+    -- ── Lagertyp-Einstellungen: NUR fuer die HUD-Anzeige einschraenken ─────────
+    -- Baut eine eigene Kopie-Liste, die nur den Anteil zeigt, der laut den
+    -- Lagertyp-Haekchen (Einstellungen-Menue) aktiv ist (activeStock). Waren,
+    -- die NUR ueber einen ausgeschalteten Lagertyp existieren, werden hier
+    -- komplett ausgeblendet -- CurrentItems oben bleibt davon unberuehrt.
+    local settingsEntries = {}
+    for _, e in ipairs(entries) do
+        local activeAmt = e.activeStock or 0
+        if activeAmt > 0 then
+            local reserveAmount = (e.demandPerHour or 0) * (DispoList.reserveStunden or 24)
+            local copy = {}
+            for k, v in pairs(e) do copy[k] = v end
+            copy.stockLevel = activeAmt
+            copy.sellable   = activeAmt - reserveAmount
+            table.insert(settingsEntries, copy)
         end
+    end
+
+    -- ZL-Filter ("Stern/CW only"): NUR fuer die HUD-Anzeige, baut aus den schon
+    -- Lagertyp-eingeschraenkten settingsEntries eine weitere Kopie-Liste. Zeigt nur
+    -- Waren mit echtem ZL-Bestand (zlStock), und zwar mit dem ZL-Anteil als
+    -- Anzeigewert -- nicht mit der Gesamtmenge aus allen Lagertypen.
+    local displayEntries = settingsEntries
+    if DispoList._zlFilterActive then
         local zlFiltered = {}
-        for _, e in ipairs(entries) do
-            local bName = e.bereich and e.bereich.name or ""
-            if zlSet[bName] then
-                table.insert(zlFiltered, e)
+        for _, e in ipairs(settingsEntries) do
+            local zlStock = e.zlStock or 0
+            if zlStock > 0 then
+                local reserveAmount = (e.demandPerHour or 0) * (DispoList.reserveStunden or 24)
+                local copy = {}
+                for k, v in pairs(e) do copy[k] = v end
+                copy.stockLevel = zlStock
+                copy.sellable   = zlStock - reserveAmount
+                table.insert(zlFiltered, copy)
             end
         end
-        entries = zlFiltered
+        displayEntries = zlFiltered
         DispoList._zlFilterEmpty = (#zlFiltered == 0)
     else
         DispoList._zlFilterEmpty = false
     end
 
-    -- Stationswert berechnen (sellable * price pro Station)
+    -- Stationswert berechnen (sellable * price pro Station) -- auf Basis dessen,
+    -- was gerade im HUD sichtbar ist (displayEntries), nicht des Gesamtbestands.
     DispoList.stationValues = {}
-    for _, e in ipairs(entries) do
+    for _, e in ipairs(displayEntries) do
         local st = e.stationName or ""
         local val = math.max(0, e.sellable or 0) * (e.price or 0)
         DispoList.stationValues[st] = (DispoList.stationValues[st] or 0) + val
@@ -818,7 +876,7 @@ function DispoList:_refreshDispoTableInner()
 
     -- Sortierung: A-Z oder Wert absteigend
     if DispoList.sortByValue then
-        table.sort(entries, function(a, b)
+        table.sort(displayEntries, function(a, b)
             local va = stationValues[a.stationName or ""] or 0
             local vb = stationValues[b.stationName or ""] or 0
             if va ~= vb then return va > vb end  -- höchster Wert zuerst
@@ -828,7 +886,7 @@ function DispoList:_refreshDispoTableInner()
             return string.lower(a.title or "") < string.lower(b.title or "")
         end)
     else
-        table.sort(entries, function(a, b)
+        table.sort(displayEntries, function(a, b)
             local sa = string.lower(a.stationName or "")
             local sb = string.lower(b.stationName or "")
             if sa ~= sb then return sa < sb end
@@ -841,7 +899,9 @@ function DispoList:_refreshDispoTableInner()
 
     -- Header werden im Draw-Code eingefügt (nach stockLevel-Filter)
 
-    DispoList.CurrentItems = entries
+    -- HUD-Anzeigeliste: das sieht der Draw-Code (DL_Display_DrawBox.lua), NICHT
+    -- CurrentItems -- damit bleibt der Export garantiert vom Stern/CW-Filter unberuehrt.
+    DispoList.DisplayItems = displayEntries
 
     -- lagerCache aktualisieren falls Drill-Down aktiv
     if DispoList.lagerViewFt ~= nil then
@@ -995,6 +1055,43 @@ function DispoList.getLagerFuerFillType(ftName)
                     end
                 end
             end
+        end
+    end
+
+    -- Fahrzeuge: Paletten (eine Summenzeile, nicht jede Palette einzeln)
+    if act.PALLET and g_currentMission.vehicleSystem ~= nil then
+        local palletTotal = 0
+        for _, v in ipairs(g_currentMission.vehicleSystem.vehicles) do
+            if v.isPallet and (v.ownerFarmId == myFarmId or v.ownerFarmId == 0) then
+                if v.spec_fillUnit ~= nil and v.spec_fillUnit.fillUnits ~= nil then
+                    for _, fu in ipairs(v.spec_fillUnit.fillUnits) do
+                        if fu.fillType == ftIdx then
+                            palletTotal = palletTotal + (fu.fillLevel or 0)
+                        end
+                    end
+                end
+            end
+        end
+        if palletTotal > 0 then
+            result[#result+1] = {name = DL_t("lt_pallet"), level = math.floor(palletTotal), capacity = 0}
+        end
+    end
+
+    -- Ballen auf der Karte (eine Summenzeile, nicht jeder Ballen einzeln)
+    if act.BALE and g_currentMission.itemSystem ~= nil and g_currentMission.itemSystem.items ~= nil then
+        local baleTotal = 0
+        for _, item in pairs(g_currentMission.itemSystem.items) do
+            local bale = (type(item) == "table" and item.item) and item.item or item
+            if bale ~= nil and bale.isa ~= nil and bale:isa(Bale) then
+                if bale.ownerFarmId == myFarmId or bale.ownerFarmId == 0 then
+                    if bale.fillType == ftIdx then
+                        baleTotal = baleTotal + (bale.fillLevel or 0)
+                    end
+                end
+            end
+        end
+        if baleTotal > 0 then
+            result[#result+1] = {name = DL_t("lt_bale"), level = math.floor(baleTotal), capacity = 0}
         end
     end
 
@@ -1201,6 +1298,7 @@ g_farmCore.modules.dispoList = {
                     amount   = entry.sellable,
                     price    = entry.price,
                     station  = entry.stationName,
+                    bereich  = entry.bereich and entry.bereich.name or nil,
                 })
             end
         end
@@ -1236,6 +1334,7 @@ g_farmCore.modules.dispoList = {
                     amount   = entry.sellable,
                     price    = entry.price,
                     station  = entry.stationName,
+                    bereich  = entry.bereich and entry.bereich.name or nil,
                 })
             end
         end
