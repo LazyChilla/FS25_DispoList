@@ -42,6 +42,8 @@ DispoList.dlClickCooldown     = nil    -- Zeitstempel letzter Klick (gegen Mehrf
 DispoList.lagerViewFt         = nil    -- aufgeklappter FillType für Lager-Drill-Down (ftName oder nil)
 DispoList.lagerCache          = {}     -- gecachte Lager-Daten pro FillType {[ftName]={name,level,capacity}}
 DispoList.reserveStunden      = 24     -- Zeitreserve für Fabrik-Puffer in Stunden
+DispoList.ecEnabled           = true   -- Baustellen-Bedarf (EverythingConstructable) abziehen? Default AN
+DispoList.lastEcProjectCount  = 0      -- Anzahl offener Baustellen (letzter Scan, fuer Settings-Anzeige)
 
 -- ─── Bereich-Zuordnung ───────────────────────────────────────────────────────
 -- ─── Bereiche Default (Vorlage für Erststart) ───────────────────────────────
@@ -79,7 +81,7 @@ DispoList.BEREICHE_PRESET_ERWEITERT = {
 -- BEREICHE: wird zur Laufzeit von loadBereiche() aufgebaut — NICHT hardcoded
 DispoList.BEREICHE         = {}
 DispoList.BEREICHE_DELETED = {}  -- Blacklist: gelöschte Bereiche
-DispoList.VERSION          = "v1.2.5.1"-- Build-Version (in Icon-Zeile angezeigt)
+DispoList.VERSION          = "v1.2.6.3"-- Build-Version (in Icon-Zeile angezeigt)
 
 -- ─── Lokalisierung ───────────────────────────────────────────────────────────
 local DL_L10N = {
@@ -295,6 +297,41 @@ function DispoList:getProductionDemandPerHour()
     return demand
 end
 
+-- ─── Baustellen-Bedarf (EverythingConstructable) ────────────────────────────
+-- Robuster Erkennungsweg (analog PrecisionFarming-Fix, Vorfall 06.07.):
+-- g_currentMission.ecProjectManager direkt pruefen statt g_modIsLoaded[modName],
+-- da der tatsaechliche Mod-Ordnername (z.B. bei editierten Varianten) vom
+-- Giants-Standardnamen abweichen kann. ecProjectManager haengt unabhaengig
+-- davon immer an derselben Stelle, sobald der Mod (egal wie benannt) laedt.
+function DispoList:getConstructionDemand()
+    local demand = {}
+    DispoList.lastEcProjectCount = 0
+    if not DispoList.ecEnabled then return demand end
+    if g_currentMission == nil or g_currentMission.ecProjectManager == nil then return demand end
+
+    local myFarmId = g_currentMission:getFarmId()
+    local ok, projects = pcall(function()
+        return g_currentMission.ecProjectManager:getProjectsForFarm(myFarmId)
+    end)
+    if not ok then
+        print("[DispoList] Fehler bei getConstructionDemand(): " .. tostring(projects))
+        return demand
+    end
+
+    local projectCount = 0
+    for _, project in ipairs(projects or {}) do
+        projectCount = projectCount + 1
+        for _, mat in ipairs(project.materials or {}) do
+            local open = (mat.amount or 0) - (mat.delivered or 0)
+            if open > 0 and mat.fillTypeIndex ~= nil then
+                demand[mat.fillTypeIndex] = (demand[mat.fillTypeIndex] or 0) + open
+            end
+        end
+    end
+    DispoList.lastEcProjectCount = projectCount
+    return demand
+end
+
 -- ─── Daten sammeln ───────────────────────────────────────────────────────────
 -- ─── Lagertypen Scanner (einmalig beim Start) ────────────────────────────────
 function DispoList:scanLagertypen()
@@ -463,6 +500,7 @@ function DispoList:_refreshDispoTableInner()
                     if prod.outputFillTypeIdsArray ~= nil then
                         for _, ftIdx in ipairs(prod.outputFillTypeIdsArray) do
                             local ok, lvl = pcall(function() return prod.storage:getFillLevel(ftIdx) end)
+                            if not ok then print("## DL PRODOUT ERROR (getFillLevel): " .. tostring(lvl)) end
                             if ok and lvl ~= nil and lvl > 0 then
                                 allStockLevels[ftIdx] = (allStockLevels[ftIdx] or 0) + math.floor(lvl)
                                 if act.PRODUCTION_OUT then
@@ -706,6 +744,12 @@ function DispoList:_refreshDispoTableInner()
     -- Produktionsbedarf
     local demandPerHour = DispoList:getProductionDemandPerHour()
 
+    -- Baustellen-Bedarf (EverythingConstructable, falls installiert & aktiviert)
+    local constructionDemand = DispoList:getConstructionDemand()
+    -- Fuer g_farmCore-Export cachen (analog CurrentItems) -- FarmAssistant soll
+    -- den rohen Bedarf lesen koennen, ohne ecProjectManager selbst anzufassen.
+    DispoList.lastConstructionDemand = constructionDemand
+
     -- Finale Liste
     -- WICHTIG: Basis ist allStockLevels (Gesamtbestand, unabhaengig von Lagertyp-
     -- Einstellungen) -- so sieht der Export (CurrentItems) immer den kompletten
@@ -718,7 +762,8 @@ function DispoList:_refreshDispoTableInner()
             if ft ~= nil then
                 local demandLph     = demandPerHour[idx] or 0
                 local reserveAmount = demandLph * (DispoList.reserveStunden or 24)
-                local sellable      = lvl - reserveAmount
+                local ecReserve     = constructionDemand[idx] or 0
+                local sellable      = lvl - reserveAmount - ecReserve
                 -- Debug: Fertigwand
                 if ft.name ~= nil and string.upper(ft.name) == "PREFABWALL" then
                 end
@@ -737,6 +782,7 @@ function DispoList:_refreshDispoTableInner()
                     activeStock   = stockLevels[idx] or 0,  -- Anteil laut Lagertyp-Einstellungen (fuer HUD)
                     zlStock       = zlStockLevels[idx] or 0,
                     demandPerHour = demandLph,
+                    ecReserve     = ecReserve,
                     stationName   = bestStation[idx].stationName,
                     price         = bestStation[idx].price,
                     priceTrend    = bestStation[idx].priceTrend,
@@ -835,7 +881,7 @@ function DispoList:_refreshDispoTableInner()
             local copy = {}
             for k, v in pairs(e) do copy[k] = v end
             copy.stockLevel = activeAmt
-            copy.sellable   = activeAmt - reserveAmount
+            copy.sellable   = activeAmt - reserveAmount - (e.ecReserve or 0)
             table.insert(settingsEntries, copy)
         end
     end
@@ -854,7 +900,7 @@ function DispoList:_refreshDispoTableInner()
                 local copy = {}
                 for k, v in pairs(e) do copy[k] = v end
                 copy.stockLevel = zlStock
-                copy.sellable   = zlStock - reserveAmount
+                copy.sellable   = zlStock - reserveAmount - (e.ecReserve or 0)
                 table.insert(zlFiltered, copy)
             end
         end
@@ -932,8 +978,10 @@ function DispoList.getLagerFuerFillType(ftName)
         local lvl = 0
         local cap = 0
         local ok1, v1 = pcall(function() return st:getFillLevel(ftIdx) end)
+        if not ok1 then print("## DL LAGER ERROR (getFillLevel): " .. tostring(v1)) end
         if ok1 and v1 ~= nil then lvl = math.floor(v1) end
         local ok2, v2 = pcall(function() return st:getCapacity(ftIdx) end)
+        if not ok2 then print("## DL LAGER ERROR (getCapacity): " .. tostring(v2)) end
         if ok2 and v2 ~= nil then cap = math.floor(v2) end
         if lvl > 0 then
             result[#result+1] = {name=name, level=lvl, capacity=cap}
@@ -984,6 +1032,7 @@ function DispoList.getLagerFuerFillType(ftName)
                     if lvl > 0 and supported then
                         local cap = 0
                         local ok2, v2 = pcall(function() return st:getCapacity(ftIdx) end)
+                        if not ok2 then print("## DL LAGER ERROR (Tierhaltung getCapacity): " .. tostring(v2)) end
                         if ok2 and v2 ~= nil then cap = math.floor(v2) end
                         result[#result+1] = {name=pName, level=math.floor(lvl), capacity=cap}
                     end
@@ -1335,10 +1384,32 @@ g_farmCore.modules.dispoList = {
                     price    = entry.price,
                     station  = entry.stationName,
                     bereich  = entry.bereich and entry.bereich.name or nil,
+                    ecReserve= entry.ecReserve or 0,  -- davon fuer Baustellen reserviert (0 wenn EC nicht installiert/aus)
                 })
             end
         end
         return result, getDispoReason()
+    end,
+
+    -- Offener Baustellen-Materialbedarf (EverythingConstructable), roh je FillType.
+    -- Rueckgabe: {{ fillType, name, amount }, ...}, projectCount
+    -- amount = noch offener Rest (mat.amount - mat.delivered) ueber alle offenen
+    -- Baustellen summiert. Leere Liste wenn EC nicht installiert, deaktiviert,
+    -- oder keine offenen Baustellen vorhanden -- projectCount unterscheidet die Faelle.
+    getConstructionDemand = function()
+        local result = {}
+        local demand = DispoList.lastConstructionDemand or {}
+        for idx, amount in pairs(demand) do
+            local ft = g_fillTypeManager:getFillTypeByIndex(idx)
+            if ft ~= nil and amount > 0 then
+                table.insert(result, {
+                    fillType = ft.name,
+                    name     = ft.title,
+                    amount   = amount,
+                })
+            end
+        end
+        return result, DispoList.lastEcProjectCount or 0
     end,
 }
 

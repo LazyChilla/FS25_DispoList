@@ -137,6 +137,10 @@ function DL_Display_DrawBox.setBox(args)
                 lastBereich = nil
                 if e.stationName ~= nil and e.stationName ~= "" then
                     totalLines = totalLines + 2  -- Leerzeile + Stationsheader
+                    local stVal = DispoList.stationValues and DispoList.stationValues[e.stationName] or 0
+                    if stVal > 0 then
+                        totalLines = totalLines + 1  -- eigene Gesamtwert-Zeile unter dem Stationsnamen
+                    end
                 end
             end
             -- Bereichsheader: 1 Zeile (Feld heisst 'bereich' nicht 'bereichName')
@@ -266,6 +270,13 @@ function DL_Display_DrawBox.setBox(args)
             elseif wc == "dl_zlFilter_" then
                 if btn == Input.MOUSE_BUTTON_LEFT then
                     DispoList._zlFilterActive = not (DispoList._zlFilterActive or false)
+                    DispoList:refreshDispoTable()
+                    box.needsUpdate = true
+                end
+
+            elseif wc == "dl_baustellen_toggle_" then
+                if btn == Input.MOUSE_BUTTON_LEFT then
+                    DispoList.ecEnabled = not (DispoList.ecEnabled == true)
                     DispoList:refreshDispoTable()
                     box.needsUpdate = true
                 end
@@ -519,13 +530,18 @@ function DL_Display_DrawBox.setBox(args)
     end
 
     -- Y-Positionen: Icon-Zeile -> 1x -> Frei-Erklaerung -> 0.85x -> Delta (optional) -> 1x -> Spaltenkoepfe
-    local freiInfoY = iconLineY - lineH * 1.0
+    -- Wenn EC installiert: zusaetzliche Label-Zeile "Fabrikpuffer / Baustelle" ueber der
+    -- Frei-Erklaerung -- alles darunter rutscht automatisch eine Zeile weiter runter.
+    local ecInstalled = g_currentMission ~= nil and g_currentMission.ecProjectManager ~= nil
+    local ecExtraY    = ecInstalled and lineH or 0
+    local baustellenLabelY = iconLineY - lineH * 1.0  -- nur gerendert wenn ecInstalled
+    local freiInfoY = iconLineY - lineH * 1.0 - ecExtraY
     local deltaY = freiInfoY - lineH * 0.85
     local hdr1Y  = deltaMsg and (deltaY - lineH * 1.0) or deltaY
     local hdr2Y  = hdr1Y - lineH * 0.85
 
     if bgLine ~= nil then
-        local bgH = deltaMsg and lineH * 4.2 or lineH * 3.2
+        local bgH = (deltaMsg and lineH * 4.2 or lineH * 3.2) + ecExtraY
         local bgY = hdr2Y - lineH * 0.55
         g_currentMission.hlUtils.setOverlay(bgLine, x, bgY, w, bgH)
         g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.05, 0.05, 0.05, 0.95})
@@ -549,12 +565,28 @@ function DL_Display_DrawBox.setBox(args)
     setTextBold(false)
 
     do
+        if ecInstalled then
+            setTextColor(0.55, 0.55, 0.55, 1)
+            setTextBold(false)
+            renderText(x + difW + iconW + difW, baustellenLabelY, size * 0.7, utf8Substr("Fabrikpuffer / Baustelle", 0))
+            setTextColor(1, 1, 1, 1)
+        end
+
         local pufferH = math.floor((DispoList.reserveStunden or 24))
         local freiInfo = "Frei = Bestand abzueglich " .. pufferH .. "h Fabrikpuffer"
-        setTextColor(0.25, 0.85, 0.25, 1)
+        if ecInstalled and DispoList.ecEnabled then
+            freiInfo = freiInfo .. " + Baustellen-Bedarf"
+        end
+        setTextColor(0.1, 1.0, 0.1, 1)
         setTextBold(false)
         renderText(x + difW + iconW + difW, freiInfoY, size * 0.85, utf8Substr(freiInfo, 0))
         setTextColor(1, 1, 1, 1)
+
+        -- Nur klickbar wenn EC installiert -- togglet DispoList.ecEnabled (1:1 Muster wie dl_zlFilter_)
+        if ecInstalled and inArea and not g_currentMission.hlUtils:disableInArea() then
+            box:setClickArea({x, x + w, freiInfoY - lineH * 0.1, freiInfoY + lineH * 0.9,
+                onClick=box.onSettingClick, whereClick="dl_baustellen_toggle_", typPos=args.typPos})
+        end
     end
 
     local vis = function(k) return DL_ColSettings == nil or DL_ColSettings:isVisible(k) end
@@ -562,7 +594,7 @@ function DL_Display_DrawBox.setBox(args)
     setTextAlignment(RenderText.ALIGN_RIGHT)
     if vis("bestand")  then renderText(rBestand,  hdr1Y, size, utf8Substr(DL_t("spalte_bestand"), 0)) end
     if vis("frei")     then
-        setTextColor(0.25, 0.85, 0.25, 1)
+        setTextColor(0.1, 1.0, 0.1, 1)
         renderText(rVerkauf, hdr1Y, size, utf8Substr(DL_t("spalte_frei"), 0))
         setTextColor(1, 1, 1, 1)
     end
@@ -570,13 +602,13 @@ function DL_Display_DrawBox.setBox(args)
     if vis("maxPreis") then renderText(rMaxPreis, hdr1Y, size, utf8Substr("Max", 0)) end
     if vis("wert")     then renderText(rWert,     hdr1Y, size, utf8Substr(DL_t("spalte_wert"), 0)) end
     if vis("vkWert")   then
-        setTextColor(0.25, 0.85, 0.25, 1)
+        setTextColor(0.1, 1.0, 0.1, 1)
         renderText(rVkWert, hdr1Y, size, utf8Substr(DL_t("spalte_frei_wert"), 0))
         setTextColor(0.75, 0.75, 0.75, 1)
     end
     if vis("max")      then renderText(rMax,      hdr1Y, size, utf8Substr("Max", 0)) end
     if vis("vkMax")    then
-        setTextColor(0.25, 0.85, 0.25, 1)
+        setTextColor(0.1, 1.0, 0.1, 1)
         renderText(rVkMax, hdr1Y, size, utf8Substr(DL_t("spalte_frei_max"), 0))
         setTextColor(0.75, 0.75, 0.75, 1)
     end
@@ -644,20 +676,26 @@ function DL_Display_DrawBox.setBox(args)
                         setTextColor(0.95, 0.75, 0.1, 1)
                         setTextAlignment(RenderText.ALIGN_LEFT)
                         renderText(x + difW, nextPosY, bigSize, utf8Substr(stName, 0))
-                        -- Gesamtwert rechts neben Name, fett grün
-                        local stVal = DispoList.stationValues and DispoList.stationValues[stName] or 0
-                        if stVal > 0 then
-                            local valTxt = utf8Substr(DL_t("filter_gesamtwert") .. " " .. fmtMon(stVal) .. " €", 0)
-                            setTextBold(true)
-                            setTextColor(0.1, 1.0, 0.1, 1)
-                            setTextAlignment(RenderText.ALIGN_LEFT)
-                            -- Position: nach Stationsname mit Abstand
-                            local nameW = getTextWidth(bigSize, utf8Substr(stName, 0))
-                            renderText(x + difW + nameW + difW * 3, nextPosY, bigSize, valTxt)
-                        end
                         setTextBold(false)
                         nextPosY = nextPosY - lineH
                         if nextPosY < y then break end
+
+                        -- Gesamtwert auf eigener Zeile unter dem Stationsnamen, fett grün
+                        -- (schmalere Box möglich, da nicht mehr neben dem Namen)
+                        local stVal = DispoList.stationValues and DispoList.stationValues[stName] or 0
+                        if stVal > 0 then
+                            lineIdx = lineIdx + 1
+                            if lineIdx >= scrollOffset and nextPosY >= y then
+                                local valTxt = utf8Substr(DL_t("filter_gesamtwert") .. " " .. fmtMon(stVal) .. " €", 0)
+                                setTextBold(true)
+                                setTextColor(0.1, 1.0, 0.1, 1)
+                                setTextAlignment(RenderText.ALIGN_LEFT)
+                                renderText(x + difW, nextPosY, bigSize, valTxt)
+                                setTextBold(false)
+                                nextPosY = nextPosY - lineH
+                                if nextPosY < y then break end
+                            end
+                        end
                     end
                 end
             end
@@ -669,7 +707,7 @@ function DL_Display_DrawBox.setBox(args)
                     lineIdx = lineIdx + 1
                     if lineIdx >= scrollOffset and nextPosY >= y then
                         setTextBold(false)
-                        setTextColor(0.3, 0.85, 0.3, 1)
+                        setTextColor(0.1, 1.0, 0.1, 1)
                         setTextAlignment(RenderText.ALIGN_LEFT)
                         renderText(x + difW * 3, nextPosY, size * 0.9, utf8Substr(DL_bereichLabel(brName), 0))
                         nextPosY = nextPosY - lineH
@@ -687,7 +725,7 @@ function DL_Display_DrawBox.setBox(args)
                     end
 
                     if (e.bestMonth or 0) == curM then
-                        setTextColor(0.3, 0.65, 1.0, 1)
+                        setTextColor(0.0, 1.0, 1.0, 1)
                     else
                         setTextColor(1, 1, 1, 1)
                     end
@@ -707,7 +745,7 @@ function DL_Display_DrawBox.setBox(args)
                     end
                     if vis("frei") then
                         local hasSell = sellable > 0
-                        setTextColor(hasSell and 0.25 or 0.85, hasSell and 0.85 or 0.25, 0.25, 1)
+                        setTextColor(hasSell and 0.1 or 1.0, hasSell and 1.0 or 0.1, 0.1, 1)
                         renderText(rVerkauf, nextPosY, size, utf8Substr(fmtVol(sellable), 0))
                     end
                     if vis("preis") then
@@ -727,7 +765,7 @@ function DL_Display_DrawBox.setBox(args)
                     end
                     if vis("vkWert") then
                         local vkWert = sellable * price
-                        setTextColor(vkWert > 0 and 0.25 or 0.85, vkWert > 0 and 0.85 or 0.25, 0.25, 1)
+                        setTextColor(vkWert > 0 and 0.1 or 1.0, vkWert > 0 and 1.0 or 0.1, 0.1, 1)
                         renderText(rVkWert, nextPosY, size,
                             utf8Substr(fmtMon(vkWert) .. " €", 0))
                     end
@@ -738,7 +776,7 @@ function DL_Display_DrawBox.setBox(args)
                     end
                     if vis("vkMax") then
                         local vkMax = sellable * maxPrice
-                        setTextColor(vkMax > 0 and 0.25 or 0.85, vkMax > 0 and 0.85 or 0.25, 0.25, 1)
+                        setTextColor(vkMax > 0 and 0.1 or 1.0, vkMax > 0 and 1.0 or 0.1, 0.1, 1)
                         renderText(rVkMax, nextPosY, size,
                             utf8Substr(fmtMon(vkMax) .. " €", 0))
                     end
@@ -759,7 +797,7 @@ function DL_Display_DrawBox.setBox(args)
                         local isOpen = DispoList.lagerViewFt == ftName
                         if isOpen then
                             -- Markierung: kleines v vor dem Warennamen
-                            setTextColor(0.2, 0.8, 1.0, 1)
+                            setTextColor(0.0, 0.85, 1.0, 1)
                             setTextAlignment(RenderText.ALIGN_LEFT)
                             renderText(x + difW * 0.5, nextPosY, size * 0.8, utf8Substr("v", 0))
                         end

@@ -670,6 +670,7 @@ function DL_Filter:savePauseSetting()
     setXMLBool(xml,   "dispoListSettings.filterPause#enabled",  DispoList.filterPauseEnabled == true)
     setXMLString(xml, "dispoListSettings.reserveStunden#value",   tostring(DispoList.reserveStunden or 24))
     setXMLString(xml, "dispoListSettings.refreshInterval#value",  tostring(DispoList.refreshInterval or 5000))
+    setXMLBool(xml,   "dispoListSettings.construction#enabled",   DispoList.ecEnabled ~= false)
     -- Lagertypen-Einstellungen
     if DispoList.activeLagertypen ~= nil then
         for key, val in pairs(DispoList.activeLagertypen) do
@@ -704,6 +705,7 @@ end
 function DL_Filter:loadPauseSetting()
     DispoList.filterPauseEnabled = false
     DispoList.reserveStunden     = 24
+    DispoList.ecEnabled          = true  -- Default AN (Baustellen-Bedarf), auch bei Erststart
     if self.xmlPath == nil then return end
     local settPath = self.xmlPath:gsub("dispoList_filter.xml", "dispoList_settings.xml")
     local exists = fileExists(settPath)
@@ -715,6 +717,11 @@ function DL_Filter:loadPauseSetting()
     local rsStr = getXMLString(xml, "dispoListSettings.reserveStunden#value")
     if rsStr ~= nil then
         DispoList.reserveStunden = math.max(1, math.min(168, tonumber(rsStr) or 24))
+    end
+    -- Nur ueberschreiben wenn Property existiert -- bei aelteren Saves ohne
+    -- diesen Eintrag bleibt der oben gesetzte Default (true) bestehen.
+    if hasXMLProperty(xml, "dispoListSettings.construction#enabled") then
+        DispoList.ecEnabled = getXMLBool(xml, "dispoListSettings.construction#enabled") == true
     end
     -- Lagertypen-Einstellungen laden
     local lagerKeys = {"ZENTRALLAGER","SILO","SILO_EXTENSION","HUSBANDRY","MANURE","BEEHIVE","BALE","PALLET","PRODUCTION_OUT"}
