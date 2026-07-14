@@ -1,5 +1,7 @@
 # FS25 DispoList
-
+<p align="center">
+  <img src="DispoList-ModVorschau.png" width="128" alt="DispoList Icon">
+</p>
 **🇩🇪 [Deutsch](#deutsch)** | **🇬🇧 [English](#english)** | **🇫🇷 [Français](#français)** | **🇮🇹 [Italiano](#italiano)** | **🇵🇹 [Português](#português)** | **🇪🇸 [Español](#español)**
 
 ---
