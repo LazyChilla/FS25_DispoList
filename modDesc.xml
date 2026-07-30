@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<modDesc descVersion="110">
+<modDesc descVersion="111">
     <title>
         <en>Dispo List</en>
         <de>Dispositionsliste</de>
@@ -9,45 +9,122 @@
         <es>Lista De Disposición</es>
     </title>
     <description>
-        <en><![CDATA[DispoList - Stock overview and best prices per product. Includes filter system with zones and stations.
-Credits: HappyLooser (HL HUD System), FedAction (NF Marsch map & inspiration).
-MP: Each player needs the mod. Not tested in multiplayer — use at your own risk.
+        <en><![CDATA[DispoList shows your farm's current stock levels and the best available selling price for every product, based on your own selling stations.
 
-Changelog (1.2.6.x): Construction site demand (EverythingConstructable, if installed) is now automatically deducted from the free amount. Toggle directly in the main HUD by clicking the free-amount explanation line. g_farmCore export extended.
+A filter system lets you group storage by custom zones and by storage type (central warehouse, silos & tanks, husbandries, pallet trucks, factory outputs, and more). The "free" amount shown automatically subtracts what your own factories need over the next hours (factory buffer) — and, if EverythingConstructable is installed, also the material still needed for your open construction site projects. Both can be adjusted or toggled directly from the HUD or its settings.
+Further settings directly in the HUD: refresh interval, font size, line spacing, search and sorting.
+
+Controls:
+Shift+C: show/hide the DispoList window
+F9: toggle mouse cursor (HL HUD System) — needed to click buttons, drag or resize the window
+
+MP: Each player needs the mod installed. Not tested in multiplayer — use at your own risk.
+
+Changelog (1.3.0.0): New "Extra offtake" tab - unlock your own selling stations to also accept additional goods (grouped by zone, with an adjustable price factor); the deals are saved with your savegame. New construction-site view showing the open material demand per site, with per-material storage drill-down. Reworked search: driving is blocked while typing, Enter or a click elsewhere confirms and frees the controls again. New HUD icon. Multiplayer sync for the extra-offtake deals is implemented but not yet fully tested in co-op.
+
+Credits: HappyLooser (HL HUD System), FedAction (NF Marsch map & inspiration). Titel-HUD icon: "Filter Menu Outline" from Material Design Icons by the Pictogrammers Team (https://pictogrammers.com), licensed under Apache 2.0.
+
+SUPPORT: Please report bugs and requests only via GitHub, always with log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Without log.txt nobody can help. No support via comments on download pages.
 ]]></en>
-        <de><![CDATA[DispoList - Lagerbestand und Bestpreise pro Ware. Mit Filtersystem nach Bereichen und Stationen.
-Credits: HappyLooser (HL HUD System), FedAction (NF Marsch Karte & Inspiration).
+        <de><![CDATA[DispoList zeigt den aktuellen Lagerbestand und den besten verfügbaren Verkaufspreis für jede Ware, basierend auf euren eigenen Verkaufsstationen.
+
+Ein Filtersystem erlaubt die Gruppierung nach frei wählbaren Bereichen und nach Lagertyp (Zentrallager, Silos & Tanks, Tierhaltung, Paletten-LKW, Fabrik-Ausgänge und mehr). Die angezeigte "freie" Menge zieht automatisch ab, was die eigenen Fabriken in den nächsten Stunden benötigen (Fabrik-Puffer) — und, falls EverythingConstructable installiert ist, zusätzlich das Material, das für offene Baustellen-Projekte noch gebraucht wird. Beides lässt sich direkt im HUD bzw. den Einstellungen anpassen oder umschalten.
+Weitere Einstellungen direkt im HUD: Refresh-Intervall, Schriftgröße, Zeilenabstand, Suche und Sortierung.
+
+Bedienung:
+Shift+C: DispoList-Fenster ein-/ausblenden
+F9: Maus-Cursor umschalten (HL HUD System) — nötig zum Klicken von Buttons, Ziehen oder Größenänderung des Fensters
+
 MP: Jeder Spieler benötigt den Mod. Nicht im Multiplayer getestet — auf eigene Gefahr.
 
-Changelog (1.2.6.x): Baustellen-Bedarf (EverythingConstructable, falls installiert) wird jetzt automatisch von der freien Menge abgezogen. Umschalten direkt im Haupt-HUD per Klick auf die Frei-Erklärung. g_farmCore-Export erweitert.
+Changelog (1.3.0.0): Neuer Reiter "Zusatzabnahme" - eigene Verkaufsstationen fuer zusaetzliche Waren freischalten (nach Bereich gruppiert, mit einstellbarem Preisfaktor); die Freischaltungen werden im Savegame gespeichert. Neue Baustellen-Ansicht mit offenem Materialbedarf je Baustelle, Lager pro Material aufklappbar. Ueberarbeitete Suche: Fahren wird beim Tippen gesperrt, Enter oder ein Klick woanders bestaetigt und gibt die Steuerung wieder frei. Neues HUD-Icon. Der Mehrspieler-Abgleich der Zusatzabnahme ist implementiert, im Coop aber noch nicht final getestet.
+
+Credits: HappyLooser (HL HUD System), FedAction (NF Marsch Karte & Inspiration). Titel-HUD-Icon: "Filter Menu Outline" aus Material Design Icons vom Pictogrammers Team (https://pictogrammers.com), lizenziert unter Apache 2.0.
+
+SUPPORT: Fehler und Wuensche bitte ausschliesslich ueber GitHub melden, immer mit log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Ohne log.txt kann niemand helfen. Kein Support ueber Kommentare auf Download-Seiten.
 ]]></de>
-        <fr><![CDATA[DispoList - Aperçu des stocks et meilleurs prix par produit. Système de filtres par zones et stations.
-Crédits: HappyLooser (HL HUD System), FedAction (carte NF Marsch & inspiration).
+        <fr><![CDATA[DispoList affiche le stock actuel de votre ferme et le meilleur prix de vente disponible pour chaque produit, basé sur vos propres stations de vente.
+
+Un système de filtres permet de regrouper le stock par zones personnalisées et par type de stockage (entrepôt central, silos & citernes, élevages, camions à palettes, sorties d'usine, et plus). La quantité "libre" affichée déduit automatiquement ce dont vos propres usines ont besoin dans les prochaines heures (tampon d'usine) — et, si EverythingConstructable est installé, également le matériel encore nécessaire pour vos chantiers ouverts. Les deux réglages sont ajustables directement dans le HUD ou ses paramètres.
+Autres réglages directement dans le HUD: intervalle d'actualisation, taille de police, interligne, recherche et tri.
+
+Commandes:
+Maj+C: afficher/masquer la fenêtre DispoList
+F9: basculer le curseur de la souris (HL HUD System) — nécessaire pour cliquer sur les boutons, déplacer ou redimensionner la fenêtre
+
 MP: Chaque joueur a besoin du mod. Non testé en multijoueur — à utiliser à vos risques.
+
+Crédits: HappyLooser (HL HUD System), FedAction (carte NF Marsch & inspiration). Icône Titel-HUD : « Filter Menu Outline » de Material Design Icons par l'équipe Pictogrammers (https://pictogrammers.com), sous licence Apache 2.0.
+
+Changelog (1.3.0.0): Nouvel onglet « Vente supplémentaire » - débloquez vos propres stations de vente pour accepter aussi des marchandises supplémentaires (regroupées par zone, avec un facteur de prix ajustable) ; les déblocages sont sauvegardés avec la partie. Nouvelle vue des chantiers montrant le besoin en matériaux par chantier, avec détail du stockage par matériau. Recherche retravaillée : la conduite est bloquée pendant la saisie, Entrée ou un clic ailleurs valide et libère les commandes. Nouvelle icône HUD. La synchronisation multijoueur de la vente supplémentaire est implémentée mais pas encore entièrement testée en coop.
+
+SUPPORT: Merci de signaler les bugs et les demandes uniquement via GitHub, toujours avec log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Sans log.txt personne ne peut aider. Pas de support via les commentaires sur les pages de telechargement.
 ]]></fr>
-        <it><![CDATA[DispoList - Panoramica delle scorte e prezzi migliori per prodotto. Sistema di filtri per zone e stazioni.
-Crediti: HappyLooser (HL HUD System), FedAction (mappa NF Marsch & ispirazione).
+        <it><![CDATA[DispoList mostra le scorte attuali della tua fattoria e il miglior prezzo di vendita disponibile per ogni prodotto, in base alle tue stazioni di vendita.
+
+Un sistema di filtri permette di raggruppare le scorte per zone personalizzate e per tipo di deposito (magazzino centrale, silos e serbatoi, allevamenti, camion pallet, uscite di fabbrica e altro). La quantità "libera" mostrata sottrae automaticamente ciò di cui le tue fabbriche hanno bisogno nelle prossime ore (buffer di fabbrica) — e, se EverythingConstructable è installato, anche il materiale ancora necessario per i tuoi cantieri aperti. Entrambi possono essere regolati o attivati direttamente dall'HUD o dalle sue impostazioni.
+Altre impostazioni direttamente nell'HUD: intervallo di aggiornamento, dimensione del carattere, interlinea, ricerca e ordinamento.
+
+Comandi:
+Maiusc+C: mostra/nasconde la finestra DispoList
+F9: attiva/disattiva il cursore del mouse (HL HUD System) — necessario per cliccare i pulsanti, trascinare o ridimensionare la finestra
+
 MP: Ogni giocatore ha bisogno del mod. Non testato in multiplayer — usare a proprio rischio.
+
+Crediti: HappyLooser (HL HUD System), FedAction (mappa NF Marsch & ispirazione). Icona Titel-HUD: "Filter Menu Outline" da Material Design Icons del team Pictogrammers (https://pictogrammers.com), sotto licenza Apache 2.0.
+
+Changelog (1.3.0.0): Nuova scheda "Vendita aggiuntiva" - sblocca le tue stazioni di vendita per accettare anche merci aggiuntive (raggruppate per zona, con un fattore di prezzo regolabile); gli sblocchi vengono salvati con la partita. Nuova vista dei cantieri con il fabbisogno di materiali per cantiere, con dettaglio del deposito per materiale. Ricerca rielaborata: la guida e bloccata durante la digitazione, Invio o un clic altrove conferma e libera di nuovo i comandi. Nuova icona HUD. La sincronizzazione multiplayer della vendita aggiuntiva e implementata ma non ancora testata a fondo in co-op.
+
+SUPPORT: Segnala bug e richieste solo tramite GitHub, sempre con log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Senza log.txt nessuno puo aiutare. Nessun supporto tramite commenti sulle pagine di download.
 ]]></it>
-        <pt><![CDATA[DispoList - Visão geral do estoque e melhores preços por produto. Sistema de filtros por zonas e estações.
-Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch & inspiração).
+        <pt><![CDATA[O DispoList mostra o estoque atual da sua fazenda e o melhor preço de venda disponível para cada produto, com base nas suas próprias estações de venda.
+
+Um sistema de filtros permite agrupar o estoque por zonas personalizadas e por tipo de armazenamento (armazém central, silos e tanques, currais, caminhões de paletes, saídas de fábrica e mais). A quantidade "livre" exibida subtrai automaticamente o que as suas próprias fábricas precisam nas próximas horas (buffer de fábrica) — e, se o EverythingConstructable estiver instalado, também o material ainda necessário para os seus projetos de construção em aberto. Ambos podem ser ajustados ou alternados diretamente no HUD ou em suas configurações.
+Mais configurações diretamente no HUD: intervalo de atualização, tamanho da fonte, espaçamento entre linhas, busca e ordenação.
+
+Controles:
+Shift+C: mostrar/ocultar a janela do DispoList
+F9: alternar o cursor do mouse (HL HUD System) — necessário para clicar em botões, arrastar ou redimensionar a janela
+
 MP: Cada jogador precisa do mod. Não testado em multijogador — use por sua conta e risco.
+
+Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch & inspiração). Ícone Titel-HUD: "Filter Menu Outline" de Material Design Icons pela equipe Pictogrammers (https://pictogrammers.com), licenciado sob Apache 2.0.
+
+Changelog (1.3.0.0): Nova aba "Venda adicional" - desbloqueie as suas proprias estacoes de venda para aceitar tambem produtos adicionais (agrupados por zona, com um fator de preco ajustavel); os desbloqueios sao salvos no savegame. Nova vista de obras mostrando a necessidade de material por obra, com detalhe de armazenamento por material. Busca reformulada: dirigir fica bloqueado durante a digitacao, Enter ou um clique em outro lugar confirma e libera os controles novamente. Novo icone de HUD. A sincronizacao multijogador da venda adicional esta implementada mas ainda nao foi totalmente testada em co-op.
+
+SUPPORT: Reporte erros e pedidos apenas via GitHub, sempre com log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Sem log.txt ninguem pode ajudar. Sem suporte via comentarios nas paginas de download.
 ]]></pt>
-        <es><![CDATA[DispoList - Resumen de existencias y mejores precios por producto. Sistema de filtros por zonas y estaciones.
-Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch & inspiración).
+        <es><![CDATA[DispoList muestra las existencias actuales de tu granja y el mejor precio de venta disponible para cada producto, según tus propias estaciones de venta.
+
+Un sistema de filtros permite agrupar el almacenamiento por zonas personalizadas y por tipo de almacén (almacén central, silos y tanques, establos, camiones de palés, salidas de fábrica y más). La cantidad "libre" mostrada resta automáticamente lo que tus propias fábricas necesitan en las próximas horas (búfer de fábrica) — y, si EverythingConstructable está instalado, también el material que aún se necesita para tus obras abiertas. Ambos se pueden ajustar o activar directamente desde el HUD o sus ajustes.
+Más ajustes directamente en el HUD: intervalo de actualización, tamaño de fuente, interlineado, búsqueda y ordenación.
+
+Controles:
+Mayús+C: mostrar/ocultar la ventana de DispoList
+F9: alternar el cursor del ratón (HL HUD System) — necesario para hacer clic en botones, arrastrar o redimensionar la ventana
+
 MP: Cada jugador necesita el mod. No probado en multijugador — úselo bajo su propio riesgo.
+
+Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch & inspiración). Icono Titel-HUD: "Filter Menu Outline" de Material Design Icons por el equipo Pictogrammers (https://pictogrammers.com), bajo licencia Apache 2.0.
+
+Changelog (1.3.0.0): Nueva pestana "Venta adicional" - desbloquea tus propias estaciones de venta para aceptar tambien mercancias adicionales (agrupadas por zona, con un factor de precio ajustable); los desbloqueos se guardan con la partida. Nueva vista de obras que muestra la necesidad de material por obra, con detalle de almacen por material. Busqueda rediseñada: conducir queda bloqueado mientras escribes, Enter o un clic en otro lugar confirma y libera de nuevo los controles. Nuevo icono de HUD. La sincronizacion multijugador de la venta adicional esta implementada pero aun no se ha probado del todo en cooperativo.
+
+SUPPORT: Informa de errores y peticiones solo a traves de GitHub, siempre con log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Sin log.txt nadie puede ayudar. Sin soporte a traves de comentarios en las paginas de descarga.
 ]]></es>
     </description>
     <author>LazyChilla</author>
-    <version>1.2.6.3</version>
+    <version>1.3.0.0</version>
     <iconFilename>icon_dispoList.dds</iconFilename>
-    <multiplayer supported="true"/>
+    <multiplayer supported="false"/>
 
     <extraSourceFiles>
         <sourceFile filename="hlUtils/_hlUtils.lua"/>
         <sourceFile filename="hlHudSystem/hlHudSystem.lua"/>
         <sourceFile filename="scripte_dl/xml/DL_Display_XmlBox.lua"/>
         <sourceFile filename="scripte_dl/draw/DL_Display_DrawBox.lua"/>
+        <!-- MP-Event-Klassen: MUESSEN zur Compile-Zeit registriert werden
+             (InitEventClass ist zur Laufzeit via source() nicht erlaubt). -->
+        <sourceFile filename="scripte_dl/DL_SellpointEvents.lua"/>
         <sourceFile filename="dispoList.lua"/>
     </extraSourceFiles>
 

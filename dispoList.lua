@@ -21,6 +21,9 @@ DispoList.searchCursorVisible = true
 -- FilterBox Suche (separate Variablen)
 DispoList.filterSearchActive  = false
 DispoList.filterSearchText    = ""
+DispoList.searchFocused       = false   -- Suchfeld hat Fokus: faengt Tasten ab + Input-Kontext gesetzt
+DispoList.searchContextPushed = false   -- Input-Kontext "DISPOLIST_SEARCH" aktuell aktiv?
+DispoList.searchDebug         = false   -- Fokus-/Kontext-Diagnose ins log.txt (nur zum Debuggen auf true)
 DispoList.filterSearchCursorTimer   = 0
 DispoList.filterSearchCursorVisible = true
 
@@ -41,6 +44,9 @@ DispoList.dlSelectedFtBereich = nil    -- Bereich des selektierten FillType
 DispoList.dlClickCooldown     = nil    -- Zeitstempel letzter Klick (gegen Mehrfach-Auslösung)
 DispoList.lagerViewFt         = nil    -- aufgeklappter FillType für Lager-Drill-Down (ftName oder nil)
 DispoList.lagerCache          = {}     -- gecachte Lager-Daten pro FillType {[ftName]={name,level,capacity}}
+DispoList.baustelleMode       = false  -- Baustellen-Ansicht (Kran-Toggle) an/aus
+DispoList.baustelleRows       = {}     -- gecachte Baustellen-Zeilen (pro Refresh gebaut): {kind="proj"|"mat", ...}
+DispoList.baustelleViewFt     = nil    -- in Baustellen-Ansicht aufgeklapptes Material (Lager-Drilldown), nil = zu
 DispoList.reserveStunden      = 24     -- Zeitreserve für Fabrik-Puffer in Stunden
 DispoList.ecEnabled           = true   -- Baustellen-Bedarf (EverythingConstructable) abziehen? Default AN
 DispoList.lastEcProjectCount  = 0      -- Anzahl offener Baustellen (letzter Scan, fuer Settings-Anzeige)
@@ -81,7 +87,7 @@ DispoList.BEREICHE_PRESET_ERWEITERT = {
 -- BEREICHE: wird zur Laufzeit von loadBereiche() aufgebaut — NICHT hardcoded
 DispoList.BEREICHE         = {}
 DispoList.BEREICHE_DELETED = {}  -- Blacklist: gelöschte Bereiche
-DispoList.VERSION          = "v1.2.6.3"-- Build-Version (in Icon-Zeile angezeigt)
+DispoList.VERSION          = "v1.3.0.0"-- Build-Version (in Icon-Zeile angezeigt)
 
 -- ─── Lokalisierung ───────────────────────────────────────────────────────────
 local DL_L10N = {
@@ -97,6 +103,11 @@ local DL_L10N = {
     spalte_monat       = {de="Monat",          en="Month",        fr="Mois",         it="Mese",         pt="Mes",          es="Mes"},
     status_pausiert    = {de="Pausiert",       en="Paused",       fr="En pause",     it="In pausa",     pt="Pausado",      es="Pausado"},
     status_manuell     = {de="manuell",        en="manual",       fr="manuel",       it="manuale",      pt="manual",       es="manual"},
+    tooltip_baustellemode = {de="Baustellen-Ansicht ein/aus (zeigt offenen Materialbedarf je Baustelle)",en="Construction view on/off (shows open material demand per site)",fr="Vue chantiers on/off (besoin de materiaux par chantier)",it="Vista cantieri on/off (fabbisogno materiali per cantiere)",pt="Vista de obras on/off (necessidade de material por obra)",es="Vista de obras on/off (necesidad de material por obra)"},
+    baustelle_titel    = {de="Baustellen",      en="Construction sites",fr="Chantiers",  it="Cantieri",     pt="Obras",        es="Obras"},
+    baustelle_leer     = {de="Keine aktiven Baustellen",en="No active construction sites",fr="Aucun chantier actif",it="Nessun cantiere attivo",pt="Nenhuma obra ativa",es="Ninguna obra activa"},
+    spalte_braucht     = {de="braucht",         en="needs",        fr="besoin",       it="serve",        pt="precisa",      es="necesita"},
+    spalte_imlager     = {de="im Lager",        en="in stock",     fr="en stock",     it="in magazzino", pt="em estoque",   es="en stock"},
     filter_titel       = {de="DispoList Filter",en="DispoList Filter",fr="DispoList Filtre",it="DispoList Filtro",pt="DispoList Filtro",es="DispoList Filtro"},
     filter_bereich_lbl = {de="Bereich:",       en="Zone:",        fr="Zone:",        it="Zona:",        pt="Zona:",        es="Zona:"},
     filter_station_lbl = {de="Station:",       en="Station:",     fr="Station:",     it="Stazione:",    pt="Estacao:",     es="Estacion:"},
@@ -155,6 +166,13 @@ local DL_L10N = {
     -- Nachtrag Gruppe A: Filter-Tabs
     tab_bereiche       = {de="Bereiche",en="Zones",fr="Zones",it="Zone",pt="Zonas",es="Zonas"},
     tab_stationen      = {de="Stationen",en="Stations",fr="Stations",it="Stazioni",pt="Estacoes",es="Estaciones"},
+    tab_freischalt     = {de="Zusatzabnahme",en="Extra purchase",fr="Achat suppl.",it="Acquisto extra",pt="Compra extra",es="Compra extra"},
+    tooltip_freischalt = {de="Zusatzabnahme: Verkaufsstationen zusaetzliche Waren annehmen lassen",en="Extra purchase: let selling stations accept extra goods",fr="Achat suppl.: laisser les stations accepter des produits supplementaires",it="Acquisto extra: fai accettare merci extra alle stazioni",pt="Compra extra: fazer estacoes aceitarem produtos extra",es="Compra extra: que las estaciones acepten productos extra"},
+    fs_col_ware        = {de="Ware  (klick = Zusatzabnahme)",en="Goods  (click = extra purchase)",fr="Produit  (clic = achat suppl.)",it="Merce  (clic = acquisto extra)",pt="Produto  (clique = compra extra)",es="Producto  (clic = compra extra)"},
+    fs_hint_wahl       = {de="Bitte links eine Station auswaehlen",en="Please select a station on the left",fr="Selectionner une station a gauche",it="Seleziona una stazione a sinistra",pt="Selecione uma estacao a esquerda",es="Seleccione una estacion a la izquierda"},
+    fs_leg_native      = {de="ab Werk",en="factory",fr="d'origine",it="di serie",pt="de fabrica",es="de fabrica"},
+    fs_leg_frei        = {de="Zusatzabnahme",en="extra purchase",fr="achat suppl.",it="acquisto extra",pt="compra extra",es="compra extra"},
+    fs_leg_verfuegbar  = {de="verfuegbar",en="available",fr="disponible",it="disponibile",pt="disponivel",es="disponible"},
     -- Gruppe C: Bereichsnamen (Presets) - key bleibt Speicher-ID, nur Anzeige uebersetzt
     ber_schuettgut     = {de="Schuettgut",en="Bulk goods",fr="Vrac",it="Sfuso",pt="Granel",es="A granel"},
     ber_fluessig       = {de="Fluessig",en="Liquids",fr="Liquides",it="Liquidi",pt="Liquidos",es="Liquidos"},
@@ -189,6 +207,19 @@ local DL_L10N = {
     tooltip_stationen  = {de="Stations-Ansicht: Filter pro Verkaufsstation",en="Station view: filter per selling station",fr="Vue stations: filtre par station de vente",it="Vista stazioni: filtro per stazione di vendita",pt="Vista estacoes: filtro por estacao de venda",es="Vista estaciones: filtro por estacion de venta"},
     tooltip_presets    = {de="Preset laden oder Einstellungen oeffnen",en="Load preset or open settings",fr="Charger un prereglage ou ouvrir les parametres",it="Carica preset o apri impostazioni",pt="Carregar predefinicao ou abrir definicoes",es="Cargar ajuste predef. o abrir configuracion"},
     tooltip_cwonly     = {de="ZL/CW only: nur Zentrallager-Bereiche anzeigen (ZL-Preset empfohlen)",en="ZL/CW only: show central warehouse zones only (ZL/CW preset recommended)",fr="ZL/CW only: afficher zones entrepot central uniquement (preset ZL/CW recommande)",it="ZL/CW only: mostra solo zone magazzino centrale (preset ZL/CW consigliato)",pt="ZL/CW only: mostrar apenas zonas do armazem central (predefinicao ZL/CW recomendada)",es="ZL/CW only: mostrar solo zonas almacen central (preset ZL/CW recomendado)"},
+    tooltip_bereichefilter = {de="Bereiche-Filter oeffnen/schliessen",en="Open/close zone filter",fr="Ouvrir/fermer le filtre de zones",it="Apri/chiudi filtro zone",pt="Abrir/fechar filtro de zonas",es="Abrir/cerrar filtro de zonas"},
+    tooltip_sort_byvalue = {de="Sortierung: nach Erloeswert (klick fuer A-Z)",en="Sorting: by revenue value (click for A-Z)",fr="Tri: par valeur de revente (clic pour A-Z)",it="Ordinamento: per valore di vendita (clic per A-Z)",pt="Ordenacao: por valor de venda (clique para A-Z)",es="Orden: por valor de venta (clic para A-Z)"},
+    tooltip_sort_byname = {de="Sortierung: A-Z (klick fuer Erloeswert)",en="Sorting: A-Z (click for revenue value)",fr="Tri: A-Z (clic pour valeur de revente)",it="Ordinamento: A-Z (clic per valore di vendita)",pt="Ordenacao: A-Z (clique para valor de venda)",es="Orden: A-Z (clic para valor de venta)"},
+    tooltip_search_close = {de="Suche schliessen  |  Achtung: Tasten steuern weiterhin das Fahrzeug!",en="Close search  |  Warning: keys still control the vehicle!",fr="Fermer la recherche  |  Attention: les touches controlent toujours le vehicule!",it="Chiudi ricerca  |  Attenzione: i tasti controllano ancora il veicolo!",pt="Fechar busca  |  Atencao: as teclas ainda controlam o veiculo!",es="Cerrar busqueda  |  Atencion: las teclas siguen controlando el vehiculo!"},
+    tooltip_search_open = {de="Suche oeffnen  |  Achtung: Tasten steuern weiterhin das Fahrzeug - besser im Menue oder ausgestiegen benutzen!",en="Open search  |  Warning: keys still control the vehicle - better used in menu or on foot!",fr="Ouvrir la recherche  |  Attention: les touches controlent toujours le vehicule - a utiliser de preference dans le menu ou a pied!",it="Apri ricerca  |  Attenzione: i tasti controllano ancora il veicolo - meglio usarla nel menu o a piedi!",pt="Abrir busca  |  Atencao: as teclas ainda controlam o veiculo - melhor usar no menu ou a pe!",es="Abrir busqueda  |  Atencion: las teclas siguen controlando el vehiculo - mejor usarla en el menu o a pie!"},
+    tooltip_linedistance = {de="Zeilenabstand aendern (L=groesser / R=kleiner)",en="Change line spacing (L=bigger / R=smaller)",fr="Modifier l'interligne (L=plus grand / R=plus petit)",it="Modifica interlinea (L=piu grande / R=piu piccolo)",pt="Alterar espacamento entre linhas (L=maior / R=menor)",es="Cambiar interlineado (L=mas grande / R=mas pequeno)"},
+    tooltip_fontsize = {de="Schriftgroesse (L=groesser / R=kleiner)",en="Font size (L=bigger / R=smaller)",fr="Taille de police (L=plus grand / R=plus petit)",it="Dimensione carattere (L=piu grande / R=piu piccolo)",pt="Tamanho da fonte (L=maior / R=menor)",es="Tamano de fuente (L=mas grande / R=mas pequeno)"},
+    tooltip_settings = {de="Einstellungen: Spalten ein/ausschalten, Fabrikpuffer",en="Settings: toggle columns, factory buffer",fr="Parametres: activer/desactiver colonnes, tampon d'usine",it="Impostazioni: attiva/disattiva colonne, buffer di fabbrica",pt="Configuracoes: ativar/desativar colunas, buffer de fabrica",es="Ajustes: activar/desactivar columnas, bufer de fabrica"},
+    tooltip_bgalpha = {de="Hintergrund: hell/dunkel/transparent umschalten (L-Klick)",en="Background: toggle light/dark/transparent (left click)",fr="Arriere-plan: basculer clair/sombre/transparent (clic gauche)",it="Sfondo: alterna chiaro/scuro/trasparente (clic sinistro)",pt="Fundo: alternar claro/escuro/transparente (clique esquerdo)",es="Fondo: alternar claro/oscuro/transparente (clic izquierdo)"},
+    tooltip_refresh = {de="Refresh-Intervall: MouseL=hoeher / MouseR=niedriger (kuerzere Intervalle = mehr Performance-Last)",en="Refresh interval: MouseL=higher / MouseR=lower (shorter intervals = more performance impact)",fr="Intervalle d'actualisation: ClicG=plus long / ClicD=plus court (intervalles plus courts = plus d'impact sur les performances)",it="Intervallo di aggiornamento: TastoSx=piu alto / TastoDx=piu basso (intervalli piu brevi = maggiore impatto sulle prestazioni)",pt="Intervalo de atualizacao: BotaoEsq=maior / BotaoDir=menor (intervalos mais curtos = mais impacto no desempenho)",es="Intervalo de actualizacion: BotonIzq=mayor / BotonDer=menor (intervalos mas cortos = mas impacto en el rendimiento)"},
+    label_fabrikpuffer_baustelle = {de="Fabrikpuffer / Baustelle",en="Factory buffer / construction site",fr="Tampon d'usine / chantier",it="Buffer di fabbrica / cantiere",pt="Buffer de fabrica / obra",es="Bufer de fabrica / obra"},
+    freiinfo_ecsuffix = {de=" + Baustellen-Bedarf",en=" + construction site demand",fr=" + besoin chantier",it=" + fabbisogno cantiere",pt=" + necessidade de obra",es=" + necesidad de obra"},
+    freiinfo_base = {de="Frei = Bestand abzueglich %dh Fabrikpuffer",en="Free = stock minus %dh factory buffer",fr="Libre = stock moins %dh tampon d'usine",it="Libero = scorte meno %dh buffer di fabbrica",pt="Livre = estoque menos %dh buffer de fabrica",es="Libre = existencias menos %dh bufer de fabrica"},
 }
 
 function DL_t(key)
@@ -330,6 +361,72 @@ function DispoList:getConstructionDemand()
     end
     DispoList.lastEcProjectCount = projectCount
     return demand
+end
+
+-- ─── Baustellen-Ansicht: flache Zeilenliste pro Baustelle ────────────────────
+-- Liefert eine flache Liste fuer die HUD-Baustellen-Ansicht (Kran-Toggle):
+--   {kind="proj", name=<Baustellenname>}  -- Block-Ueberschrift
+--   {kind="mat",  name=<Warenname>, needed=<offener Bedarf>, stock=<Gesamtbestand>}
+-- Bewusst UNABHAENGIG von DispoList.ecEnabled (das ist nur der Reserve-Abzug in
+-- der Verkaufsansicht) -- die Baustellen-Ansicht zeigt den Bedarf immer, sobald
+-- EverythingConstructable laeuft. Projektname via project:getStoreItemName()
+-- (verifiziert aus FarmAssistant/ConstructionScanner.lua). Stock je FillType aus
+-- allStockLevels (Gesamtbestand, wird beim Refresh sowieso gebaut).
+function DispoList:buildBaustelleRows(allStockLevels)
+    local rows = {}
+    if g_currentMission == nil or g_currentMission.ecProjectManager == nil then return rows end
+
+    local myFarmId = g_currentMission:getFarmId()
+    local ok, projects = pcall(function()
+        return g_currentMission.ecProjectManager:getProjectsForFarm(myFarmId)
+    end)
+    if not ok then
+        print("[DispoList] Fehler bei buildBaustelleRows(): " .. tostring(projects))
+        return rows
+    end
+
+    for _, project in ipairs(projects or {}) do
+        local matRows = {}
+        for _, mat in ipairs(project.materials or {}) do
+            local needed = (mat.amount or 0) - (mat.delivered or 0)
+            if needed > 0 and mat.fillTypeIndex ~= nil then
+                local ft    = g_fillTypeManager:getFillTypeByIndex(mat.fillTypeIndex)
+                local nm    = (ft ~= nil and ft.title) or mat.fillTypeName or "?"
+                local ftNm  = (ft ~= nil and ft.name) or mat.fillTypeName  -- interner Name fuer Lager-Aufklappen
+                local stock = (allStockLevels ~= nil and allStockLevels[mat.fillTypeIndex]) or 0
+                table.insert(matRows, {kind = "mat", name = nm, ftName = ftNm, needed = needed, stock = stock})
+            end
+        end
+        -- Nach Deckungsgrad (Lager/Bedarf) absteigend sortieren: gut gedeckte Waren
+        -- oben, am staerksten fehlende unten. needed ist hier immer > 0 (oben gefiltert).
+        table.sort(matRows, function(a, b)
+            return ((a.stock or 0) / (a.needed or 1)) > ((b.stock or 0) / (b.needed or 1))
+        end)
+        if #matRows > 0 then
+            -- Projektname: zuerst EC's getStoreItemName(); liefert die aber "Unknown"
+            -- (Store-Eintrag nicht aufloesbar), Fallback = Dateiname-Basename aus
+            -- project.storeItemXml (verifiziert: FarmAssistant v2.28, ingame bestaetigt).
+            local pname = nil
+            local okN, nameRes = pcall(function() return project:getStoreItemName() end)
+            if okN and type(nameRes) == "string" and nameRes ~= "" and nameRes ~= "Unknown" then
+                pname = nameRes
+            end
+            if pname == nil then
+                local okX, xmlPath = pcall(function() return project.storeItemXml end)
+                if okX and type(xmlPath) == "string" and xmlPath ~= "" then
+                    local norm = xmlPath:gsub("\\", "/")
+                    local base = norm:match("([^/]+)%.xml$") or norm:match("([^/]+)$")
+                    if base ~= nil and base ~= "" then
+                        pname = base:sub(1, 1):upper() .. base:sub(2)
+                    end
+                end
+            end
+            if pname == nil then pname = "?" end
+            table.insert(rows, {kind = "proj", name = pname})
+            for _, r in ipairs(matRows) do table.insert(rows, r) end
+        end
+    end
+    return rows
 end
 
 -- ─── Daten sammeln ───────────────────────────────────────────────────────────
@@ -749,6 +846,9 @@ function DispoList:_refreshDispoTableInner()
     -- Fuer g_farmCore-Export cachen (analog CurrentItems) -- FarmAssistant soll
     -- den rohen Bedarf lesen koennen, ohne ecProjectManager selbst anzufassen.
     DispoList.lastConstructionDemand = constructionDemand
+    -- Baustellen-Ansicht (Kran-Toggle) aus denselben Rohdaten bauen und cachen,
+    -- damit der Draw pro Frame nur liest statt zu scannen. Stock = allStockLevels.
+    DispoList.baustelleRows = DispoList:buildBaustelleRows(allStockLevels)
 
     -- Finale Liste
     -- WICHTIG: Basis ist allStockLevels (Gesamtbestand, unabhaengig von Lagertyp-
@@ -1156,6 +1256,7 @@ function DispoList:RegisterDisplaySystem()
        g_currentMission.hlHudSystem.hlHud.generate ~= nil then
         DL_Display_XmlBox:loadBox("DL_Display_Box", true)
         DL_Display_XmlBox:loadBox("DL_Filter_Box", true)
+        DL_TitelHud_XmlHud:loadHud("DL_TitelHud")
         DispoList:refreshDispoTable()
     else
         print("#WARNING: DispoList MISSING --> HL Hud System!")
@@ -1166,21 +1267,38 @@ end
 -- ─── loadMap ─────────────────────────────────────────────────────────────────
 function DispoList:loadMap(mapName)
     DispoList.extProdSpecKey = nil
-    -- Sicherheits-Reset: playerFrozen und Input-Blocking immer deaktivieren
+    -- Sicherheits-Reset: playerFrozen und Such-Fokus immer deaktivieren.
+    -- Frische Mission -> Input-Kontexte sind neu, nur unsere Flags zuruecksetzen
+    -- (KEIN revertContext hier, sonst Warnung auf ROOT-Ebene).
+    DispoList.searchFocused       = false
+    DispoList.searchContextPushed = false
+    DispoList.filterSearchActive  = false
+    DispoList.filterSearchText    = ""
     if g_currentMission ~= nil and g_currentMission.hlUtils ~= nil then
         pcall(function()
             g_currentMission.hlUtils.playerFrozen = false
         end)
     end
     source(DispoList.modDir .. "scripte_dl/DL_FilterManager.lua")
+    -- DL_SellpointEvents.lua NICHT hier source()n: die MP-Event-Klassen werden
+    -- zur Compile-Zeit ueber modDesc <extraSourceFiles> registriert (InitEventClass
+    -- ist zur Laufzeit nicht erlaubt -> "Event initialization only allowed at compile time").
+    source(DispoList.modDir .. "scripte_dl/DL_SellpointUnlock.lua")
     source(DispoList.modDir .. "scripte_dl/draw/DL_FilterMenu_Draw.lua")
     source(DispoList.modDir .. "scripte_dl/xml/DL_ColSettings_GuiBox.lua")
+    source(DispoList.modDir .. "scripte_dl/xml/DL_TitelHud_XmlHud.lua")
+    source(DispoList.modDir .. "scripte_dl/draw/DL_TitelHud_DrawHud.lua")
+    source(DispoList.modDir .. "scripte_dl/mouseKeyEvents/DL_TitelHud_MouseKeyEventsHud.lua")
     if not DispoList:getDetiServer() then
         Mission00.onStartMission = Utils.appendedFunction(Mission00.onStartMission, function()
             DL_Filter:init()
             DispoList.buildFillTypeToBereich()  -- Order aus XML übernehmen
             DispoList:scanLagertypen()
             DispoList:RegisterDisplaySystem()
+            -- Sellpoint-Freischalt-Konsolenbefehle zuverlaessig hier registrieren
+            -- (onStartMission feuert garantiert -- anders als FSBaseMission.loadMapFinished
+            -- beim source()-Zeitpunkt, das die dlsp-Befehle in Etappe 1 verpasst hat).
+            if DL_SellpointUnlock ~= nil then DL_SellpointUnlock.registerCommands() end
         end)
     end
     DispoList:hookStorageChanges()
@@ -1297,6 +1415,8 @@ function DispoList:toggleFilterMenu()
             end
         end
     else
+        -- Suche beenden (Fokus+Kontext frei, Query leer)
+        DispoList.resetSearch()
         -- Pause aufheben beim Schließen
         if DispoList.filterPauseEnabled then
             if DispoList.previousTimeScale ~= nil then g_currentMission.timeScale = DispoList.previousTimeScale end
@@ -1368,6 +1488,11 @@ g_farmCore.modules.dispoList = {
     end,
 
     -- Alle freien Waren mit Menge und Wert
+    -- Aufnahmebedingung: sellable > 0 (normaler Fall) ODER ecReserve > 0
+    -- (Baustelle braucht diese Ware -- dann Eintrag auch bei negativem
+    -- sellable aufnehmen, damit FarmAssistant stockLevel/ecReserve als
+    -- rohe Zahlen fuer die eigene Baustellen-vs-Lager-Rechnung bekommt,
+    -- 14.07., siehe FarmAssistant-Session).
     getFreeGoods = function()
         local result = {}
         local table_ = DispoList.CurrentItems
@@ -1375,16 +1500,17 @@ g_farmCore.modules.dispoList = {
         local seen = {}
         for _, entry in ipairs(table_) do
             local key = entry.ftName or ""
-            if not seen[key] and (entry.sellable or 0) > 0 then
+            if not seen[key] and ((entry.sellable or 0) > 0 or (entry.ecReserve or 0) > 0) then
                 seen[key] = true
                 table.insert(result, {
-                    fillType = entry.ftName,
-                    name     = entry.title,
-                    amount   = entry.sellable,
-                    price    = entry.price,
-                    station  = entry.stationName,
-                    bereich  = entry.bereich and entry.bereich.name or nil,
-                    ecReserve= entry.ecReserve or 0,  -- davon fuer Baustellen reserviert (0 wenn EC nicht installiert/aus)
+                    fillType   = entry.ftName,
+                    name       = entry.title,
+                    amount     = entry.sellable,
+                    stockLevel = entry.stockLevel,    -- NEU (14.07.): roher Bestand, ungedeckelt von Fabrik-Puffer/ecReserve
+                    price      = entry.price,
+                    station    = entry.stationName,
+                    bereich    = entry.bereich and entry.bereich.name or nil,
+                    ecReserve  = entry.ecReserve or 0,  -- davon fuer Baustellen reserviert (0 wenn EC nicht installiert/aus)
                 })
             end
         end
@@ -1609,9 +1735,57 @@ end
 -- ─── Action (Toggle) ─────────────────────────────────────────────────────────
 
 -- ─── Input-Blocking Hilfsfunktionen ─────────────────────────────────────────
+-- Setzt/loest den Fokus des Suchfelds. Bei Fokus wird ein eigener Giants-
+-- Input-Kontext gesetzt ("DISPOLIST_SEARCH"): darin sind KEINE Gameplay-/Fahr-
+-- Aktionen registriert (nur globale wie ESC), also steuern die Tasten nur noch
+-- die Suche. Beim Loslassen (Enter/Feld-Klick weg/HUD zu) wird der Kontext
+-- zurueckgesetzt -> Fahren wieder frei. Verifiziert aus Giants InputBinding.lua
+-- (setContext/revertContext, ROOT_CONTEXT). Idempotent ueber searchContextPushed.
+function DispoList.setSearchFocus(on)
+    on = (on == true)
+    DispoList.searchFocused = on
+    if g_inputBinding == nil then return end
+    if on then
+        if not DispoList.searchContextPushed then
+            g_inputBinding:setContext("DISPOLIST_SEARCH", true, false)
+            DispoList.searchContextPushed = true
+        end
+    else
+        if DispoList.searchContextPushed then
+            g_inputBinding:revertContext(true)
+            DispoList.searchContextPushed = false
+        end
+    end
+    -- TEMP-Diagnose (nur bei Fokuswechsel, kein Spam): zeigt Fokus-Zustand +
+    -- welcher Input-Kontext danach aktiv ist. Bei fertigem Build wieder raus.
+    if DispoList.searchDebug then
+        local ctx = (g_inputBinding.getContextName ~= nil) and g_inputBinding:getContextName() or "?"
+        print(string.format("[DispoList] setSearchFocus(%s) -> focused=%s, context=%s, pushed=%s",
+            tostring(on), tostring(DispoList.searchFocused), tostring(ctx), tostring(DispoList.searchContextPushed)))
+    end
+end
+
+-- Filter-Suche komplett beenden: Fokus loesen (Kontext frei), Query leeren.
+-- An JEDEM Schliess-Weg der Filter-Box aufgerufen (auch HL-eigener X-Button).
+function DispoList.resetSearch()
+    DispoList.setSearchFocus(false)
+    DispoList.filterSearchActive = false
+    DispoList.filterSearchText   = ""
+    DispoList.searchFieldBounds  = nil   -- Feldgrenzen ungueltig -> kein versehentlicher Blur-Test
+end
+
+-- Haupt-Lupe komplett beenden: Fokus loesen (Kontext frei), Query leeren, Lupe aus.
+-- An JEDEM Schliess-Weg der Haupt-Box aufgerufen (HUD-Toggle, X-Button).
+function DispoList.resetMainSearch()
+    DispoList.setSearchFocus(false)
+    DispoList.searchActive = false
+    DispoList.searchText   = ""
+    DispoList.searchDirty  = true
+end
+
+-- Kompatibilitaets-Shim: alte Aufrufe von setInputBlocking(bool) -> Fokus setzen.
 function DispoList.setInputBlocking(block)
-    -- Input-Blocking deaktiviert (zu riskant in FS25)
-    -- Bekanntes Problem: WASD reagiert während Texteingabe
+    DispoList.setSearchFocus(block)
 end
 
 -- ─── keyEvent: Texteingabe für Suche ────────────────────────────────────────
@@ -1619,6 +1793,12 @@ end
 function DispoList:mouseEvent(posX, posY, isDown, isUp, button)
     DispoList._mouseX = posX
     DispoList._mouseY = posY
+    -- Hinweis: "Klick woanders loest Fokus" laeuft NICHT ueber rohe mouseEvents
+    -- (die feuern zu oft/synthetisch und koennen den Fokus sofort wieder
+    -- wegklicken). Stattdessen blurrt der onSettingClick-Handler der Filter-Box
+    -- bei einem echten Klick auf ein ANDERES Bedienelement -- siehe
+    -- DL_FilterMenu_Draw.lua.
+
     -- Mausrad-Scroll für linke Spalte im Filter-Panel
     if DispoList.filterMenuOpen and (button == Input.MOUSE_BUTTON_WHEEL_UP or button == Input.MOUSE_BUTTON_WHEEL_DOWN) and isDown then
         local fbox = g_currentMission.hlHudSystem and g_currentMission.hlHudSystem.hlBox and
@@ -1638,61 +1818,56 @@ function DispoList:mouseEvent(posX, posY, isDown, isUp, button)
 end
 
 function DispoList:keyEvent(unicode, sym, modifier, isDown)
-    -- Input-Blocking: Spielaktionen sperren wenn Suchfeld aktiv
-    if DispoList.filterSearchActive and g_inputBinding ~= nil then
-        if unicode > 31 and unicode < 256 then
-            -- blockieren durch vorzeitiges Verarbeiten
-        elseif sym ~= Input.KEY_backspace and sym ~= Input.KEY_return and sym ~= Input.KEY_kp_enter then
-            if isDown then return end
-        end
-    end
-    -- FilterBox Suche hat Vorrang
-    if DispoList.filterSearchActive then
+    -- Live-Suche: Tasten NUR abfangen, solange das Suchfeld den FOKUS hat.
+    -- Waehrenddessen ist der Fahr-/Gameplay-Input ueber den Input-Kontext
+    -- "DISPOLIST_SEARCH" suspendiert (siehe DispoList.setSearchFocus). Enter
+    -- loest den Fokus -> Filter bleibt sichtbar, Steuerung wieder frei.
+    -- Live-Suche: Tasten NUR abfangen, solange ein Suchfeld den FOKUS hat.
+    -- Es gibt ZWEI Suchen: die Haupt-Lupe (searchActive/searchText) und die
+    -- Filter-Suche (filterSearchActive/filterSearchText). Beide setzen beim
+    -- Oeffnen searchFocused=true (Input-Kontext "DISPOLIST_SEARCH" -> Fahren
+    -- gesperrt). Hier ins jeweils aktive Feld tippen. Enter loest den Fokus.
+    if DispoList.searchFocused then
         if not isDown then return end
+        if DispoList.searchDebug then
+            print(string.format("[DispoList] keyEvent while focused: sym=%s unicode=%s main=%s filter=%s",
+                tostring(sym), tostring(unicode), tostring(DispoList.searchActive), tostring(DispoList.filterSearchActive)))
+        end
+        if sym == Input.KEY_return or sym == Input.KEY_kp_enter then
+            DispoList.setSearchFocus(false)   -- bestaetigen, weiterspielen
+            return
+        end
+        -- Zielfeld: Haupt-Suche hat Vorrang, sonst Filter-Suche
+        local useMain = DispoList.searchActive == true
         if sym == Input.KEY_backspace then
-            if utf8Strlen(DispoList.filterSearchText) > 0 then
+            if useMain then
+                local len = utf8Strlen(DispoList.searchText)
+                if len > 0 then
+                    DispoList.searchText = utf8Substr(DispoList.searchText, 0, len - 1)
+                    DispoList.searchDirty = true
+                end
+            else
                 local len = utf8Strlen(DispoList.filterSearchText)
-                DispoList.filterSearchText = utf8Substr(DispoList.filterSearchText, 0, len - 1)
-                if utf8Strlen(DispoList.filterSearchText) == 0 then
-                    DispoList.filterSearchActive = false
+                if len > 0 then
+                    DispoList.filterSearchText = utf8Substr(DispoList.filterSearchText, 0, len - 1)
                 end
             end
-        elseif sym == Input.KEY_return or sym == Input.KEY_kp_enter then
-            -- nichts, läuft inkrementell
+            return
         elseif unicode > 31 and unicode < 128 then
             local ok, char = pcall(string.char, unicode)
             if ok and char ~= nil and char ~= "" then
-                DispoList.filterSearchText = DispoList.filterSearchText .. char
+                if useMain then
+                    DispoList.searchText  = DispoList.searchText .. char
+                    DispoList.searchDirty = true
+                else
+                    DispoList.filterSearchText = DispoList.filterSearchText .. char
+                end
             end
+            return
         end
-        return
+        return   -- alle anderen Tasten schlucken (Fahrzeug soll nicht reagieren)
     end
-    if not DispoList.searchActive then return end
-    if not isDown then return end
-    -- Escape wird von FS25 abgefangen - nicht verwenden
-    -- Backspace: letztes Zeichen löschen, bei leerem Text Suche schliessen
-    if sym == Input.KEY_backspace then
-        if utf8Strlen(DispoList.searchText) > 0 then
-            local len = utf8Strlen(DispoList.searchText)
-            DispoList.searchText = utf8Substr(DispoList.searchText, 0, len - 1)
-            DispoList.searchDirty = true
-            -- Leer -> Suche schliessen
-            if utf8Strlen(DispoList.searchText) == 0 then
-                DispoList.searchActive = false
-            end
-        end
-        return
-    end
-    -- Enter: Suche bestätigen (nichts tun, läuft schon inkrementell)
-    if sym == Input.KEY_return or sym == Input.KEY_kp_enter then return end
-    -- Zeichen anhängen wenn druckbar (unicode > 31 und < 127 für ASCII)
-    if unicode > 31 and unicode < 256 then
-        local char = string.char(unicode)
-        if char ~= nil and char ~= "" then
-            DispoList.searchText  = DispoList.searchText .. char
-            DispoList.searchDirty = true
-        end
-    end
+    -- Kein Fokus -> keyEvent macht nichts, Tasten gehen ans Spiel (Fahren frei).
 end
 
 -- ─── mouseEvent: nicht genutzt ───────────────────────────────────────────────
@@ -1720,7 +1895,7 @@ function PlayerInputComponent:dlSystemActionCallback(actionName, inputValue, cal
                         if fbox ~= nil and fbox.show then
                             fbox.show = false;
                             DispoList.filterMenuOpen = false;
-                            DispoList.setInputBlocking(false)  -- Sicherheits-Reset
+                            DispoList.resetSearch()  -- Sicherheits-Reset (Fokus+Kontext frei, Query leer)
                             DispoList.dlSelectedFt = nil;
                             DispoList.dlSelectedFtTitle = nil;
                             DispoList.dlSelectedFtBereich = nil;
@@ -1728,6 +1903,7 @@ function PlayerInputComponent:dlSystemActionCallback(actionName, inputValue, cal
                             DispoList.filterSearchText = "";
                             DispoList.filterResetConfirm = false;
                         end
+                        DispoList.resetMainSearch()  -- Haupt-Lupe beenden (Fokus frei, Query leer)
                     end
                 end
             end
