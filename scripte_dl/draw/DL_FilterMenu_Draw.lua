@@ -135,6 +135,15 @@ function DL_FilterMenu_Draw.setBox(args)
             local btn = a.button
             -- dlf_mode_ feuert bei isDown=false (mouseUp), alle anderen bei isDown=true
             if wc ~= "dlf_mode_" and not a.isDown then return end
+
+            -- "Klick woanders bestaetigt die Suche": ein echter Klick auf IRGENDEIN
+            -- anderes Bedienelement (nicht die Lupe, nicht das Suchfeld selbst)
+            -- loest den Tipp-Fokus -> Fahren wieder frei. Laeuft nur ueber echte,
+            -- registrierte Klick-Areas (kein rohes mouseEvent-Rauschen).
+            if DispoList.searchFocused and a.isDown
+               and wc ~= "dlf_search_" and wc ~= "dlf_searchfield_" then
+                DispoList.setSearchFocus(false)
+            end
             local now = g_currentMission.time or 0
             local function cooldown(ms)
                 if DispoList.dlClickCooldown ~= nil and now - DispoList.dlClickCooldown < (ms or 400) then return true end
@@ -168,10 +177,21 @@ function DL_FilterMenu_Draw.setBox(args)
             elseif wc == "dlf_search_" then
                 if btn == Input.MOUSE_BUTTON_LEFT then
                     if cooldown(400) then return end
-                    DispoList.filterSearchActive = not DispoList.filterSearchActive
-                    if not DispoList.filterSearchActive then DispoList.filterSearchText = "" end
+                    if DispoList.filterSearchActive then
+                        DispoList.resetSearch()             -- schliessen: Fokus+Kontext frei, Query leer
+                    else
+                        -- Nur EINE Lupe aktiv: Haupt-Lupe zu, damit Getippe eindeutig hier landet
+                        if DispoList.resetMainSearch ~= nil then DispoList.resetMainSearch() end
+                        DispoList.filterSearchActive = true
+                        DispoList.filterSearchCursorTimer = 0
+                        DispoList.setSearchFocus(true)      -- oeffnen + Fokus (tippen)
+                    end
+                end
+            elseif wc == "dlf_searchfield_" then
+                if btn == Input.MOUSE_BUTTON_LEFT then
+                    if cooldown(300) then return end
                     DispoList.filterSearchCursorTimer = 0
-                    DispoList.setInputBlocking(DispoList.filterSearchActive)
+                    DispoList.setSearchFocus(true)          -- wieder ins Feld: weiter tippen
                 end
             elseif wc == "dlf_preset_reset_" then
                 if btn == Input.MOUSE_BUTTON_LEFT then
@@ -261,11 +281,36 @@ function DL_FilterMenu_Draw.setBox(args)
 
     -- Suchtext rechts neben Lupe (wenn aktiv) - schiebt Tabs nach rechts
     if sActive then
-        local cursor = DispoList.filterSearchCursorVisible and "|" or " "
-        setTextColor(0.0, 1.0, 0.8, 1)
+        local focused = DispoList.searchFocused
+        -- Cursor blinkt NUR bei Fokus (sonst signalisiert es faelschlich "tippt gerade")
+        local cursor = (focused and DispoList.filterSearchCursorVisible) and "|" or ""
+        local shown  = DispoList.filterSearchText .. cursor
+        if shown == "" then shown = " " end  -- leeres Feld trotzdem sichtbar
         setTextAlignment(RenderText.ALIGN_LEFT)
-        renderText(ixPos, iconPosY, size, utf8Substr(DispoList.filterSearchText .. cursor, 0))
-        ixPos = ixPos + getTextWidth(size, DispoList.filterSearchText .. cursor) + difW * 2
+        setTextBold(focused)
+        local fieldX1 = ixPos
+        local textW   = getTextWidth(size, shown)
+        local fieldX2 = fieldX1 + textW + difW * 2
+        -- Fokus-Hintergrund: unuebersehbare helle Box hinter dem Suchtext (NUR bei Fokus).
+        -- So sieht man sofort "das Feld faengt gerade Tasten ab" und vergisst das Enter nicht.
+        if focused and bgLine ~= nil then
+            g_currentMission.hlUtils.setOverlay(bgLine, fieldX1 - difW * 0.6, iconPosY - iconH * 0.30,
+                (fieldX2 - fieldX1) + difW * 0.4, iconH * 1.20)
+            g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.0, 0.42, 0.36, 0.90})
+            bgLine:render()
+        end
+        -- fokussiert = helles Cyan + fett (tippt gerade), Ruhe = klar gedimmtes Grau (bestaetigt)
+        if focused then setTextColor(0.55, 1.0, 0.92, 1) else setTextColor(0.5, 0.5, 0.5, 1) end
+        renderText(fieldX1, iconPosY, size, utf8Substr(shown, 0))
+        setTextBold(false)
+        ixPos = fieldX2
+        -- Klickbereich ueber dem Suchtext: nach Enter/Klick-weg hier hin klicken = wieder tippen
+        local fbY1 = iconPosY - iconH * 0.3
+        local fbY2 = iconPosY + iconH * 0.7
+        box:setClickArea({fieldX1 - difW, ixPos, fbY1, fbY2,
+            onClick = box.onSettingClick, whereClick = "dlf_searchfield_", typPos = args.typPos})
+        -- Feld-Grenzen fuer "Klick woanders loest Fokus" (siehe DispoList:mouseEvent) merken
+        DispoList.searchFieldBounds = {fieldX1 - difW, ixPos, fbY1, fbY2}
     end
 
     -- Trenner |
@@ -275,8 +320,8 @@ function DL_FilterMenu_Draw.setBox(args)
 
     -- Bereiche / Stationen Tabs in Icon-Zeile
     DispoList.filterModeTabs = {}
-    local tabTooltips = {bereich=DL_t("tooltip_bereiche"), station=DL_t("tooltip_stationen")}
-    for _, tab in ipairs({{mode="bereich",label=DL_t("tab_bereiche")},{mode="station",label=DL_t("tab_stationen")}}) do
+    local tabTooltips = {bereich=DL_t("tooltip_bereiche"), station=DL_t("tooltip_stationen"), freischalt=DL_t("tooltip_freischalt")}
+    for _, tab in ipairs({{mode="bereich",label=DL_t("tab_bereiche")},{mode="station",label=DL_t("tab_stationen")},{mode="freischalt",label=DL_t("tab_freischalt")}}) do
         local isAct = (DispoList.filterMode == tab.mode)
         local tw = getTextWidth(size * 1.0, tab.label)
         if isAct then
@@ -373,7 +418,7 @@ function DL_FilterMenu_Draw.setBox(args)
             local undoW = getTextWidth(size * 0.85, undoTxt)
             DispoList.filterUndoArea = {x1=undoX, y1=infoPosY, x2=undoX+undoW+difW, y2=infoPosY+iconH}
         end
-    elseif DispoList.filterMode == "station" and DispoList.filterSelStation ~= nil then
+    elseif (DispoList.filterMode == "station" or DispoList.filterMode == "freischalt") and DispoList.filterSelStation ~= nil then
         setTextColor(0.0, 1.0, 0.2, 1)
         renderText(infoX, infoLineY, size * 0.85, utf8Substr(DL_t("filter_station_lbl") .. " " .. DispoList.filterSelStation, 0))
     else
@@ -395,7 +440,7 @@ function DL_FilterMenu_Draw.setBox(args)
     -- colW dynamisch: nach längstem Stationsnamen (gecacht)
     if box.needsUpdate or box.ownTable.filterColW == nil then
         local maxSW = w * 0.25  -- Minimum
-        if DispoList.filterMode == "station" then
+        if DispoList.filterMode == "station" or DispoList.filterMode == "freischalt" then
             local stations = DL_FilterMenu_Draw.buildStationList()
             for _, st in ipairs(stations or {}) do
                 local tw = getTextWidth(size, utf8Substr((st.name or "") .. "  ", 0))
@@ -450,6 +495,22 @@ function DL_FilterMenu_Draw.setBox(args)
             setTextColor(0.0, 0.6, 1.0, 1)
             renderText(lx, legendY, size * 1.0, utf8Substr(DL_t("filter_legende_blau"), 0))
         end
+    elseif DispoList.filterMode == "freischalt" then
+        setTextColor(0.7, 0.7, 0.7, 1)
+        renderText(x + difW, listTop, size * 1.0, utf8Substr(DL_t("filter_station_col"), 0))
+        renderText(col2X + difW, listTop, size * 1.0, utf8Substr(DL_t("fs_col_ware"), 0))
+        -- Farblegende
+        setTextBold(false)
+        local legendY = listTop - lineH * 1.2
+        local lx = col2X + difW
+        setTextColor(0.1, 1.0, 0.1, 1)
+        renderText(lx, legendY, size * 1.0, utf8Substr("v " .. DL_t("fs_leg_frei"), 0))
+        lx = lx + getTextWidth(size * 1.0, "v " .. DL_t("fs_leg_frei") .. "    ")
+        setTextColor(0.82, 0.82, 0.82, 1)
+        renderText(lx, legendY, size * 1.0, utf8Substr("- " .. DL_t("fs_leg_verfuegbar"), 0))
+        lx = lx + getTextWidth(size * 1.0, "- " .. DL_t("fs_leg_verfuegbar") .. "    ")
+        setTextColor(0.5, 0.5, 0.5, 1)
+        renderText(lx, legendY, size * 1.0, utf8Substr("# " .. DL_t("fs_leg_native"), 0))
     else
         -- Station-Modus: normaler Header, kein Banner
         setTextColor(0.7, 0.7, 0.7, 1)
@@ -462,7 +523,7 @@ function DL_FilterMenu_Draw.setBox(args)
     -- filterUndoArea wird weiter oben in der Info-Zeile gesetzt wenn vorhanden
 
     local listStart = listTop - lineH * 1.2
-    local showLegend = DispoList.filterMode == "bereich"
+    local showLegend = (DispoList.filterMode == "bereich" or DispoList.filterMode == "freischalt")
         and not (DispoList.filterSearchActive and DispoList.filterSearchText ~= "")
     if showLegend then
         listStart = listStart - lineH
@@ -478,6 +539,9 @@ function DL_FilterMenu_Draw.setBox(args)
             x, y, w, h, col2X, colW, listStart, listTop, size, lineH, difW, bgLine, rightScrollOffset)
     elseif DispoList.filterMode == "bereich" then
         totalRightLines = DL_FilterMenu_Draw.drawBereichMode(
+            x, y, w, h, col2X, colW, listStart, listTop, size, lineH, difW, bgLine, rightScrollOffset, fOvGroup, fOvByName)
+    elseif DispoList.filterMode == "freischalt" then
+        totalRightLines = DL_FilterMenu_Draw.drawFreischaltMode(
             x, y, w, h, col2X, colW, listStart, listTop, size, lineH, difW, bgLine, rightScrollOffset, fOvGroup, fOvByName)
     else
         totalRightLines = DL_FilterMenu_Draw.drawStationMode(
@@ -817,6 +881,24 @@ function DL_FilterMenu_Draw.setBox(args)
                         end
                         -- Kein eager save mehr -- zentral ueber ItemSystem.save-Hook
                         DispoList.filterAllStations = nil  -- Cache leeren
+                        DispoList:refreshDispoTable()
+                    elseif area.typ == "su_toggle" then
+                        -- Freischalt-Modus: Ware an dieser Station freischalten / entfernen
+                        local now = g_currentMission.time or 0
+                        if DispoList.dlClickCooldown ~= nil and now - DispoList.dlClickCooldown < 400 then return end
+                        DispoList.dlClickCooldown = now
+                        if DL_SellpointUnlock ~= nil then
+                            DL_SellpointUnlock.guiToggle(area.station, area.ftName)
+                        end
+                        DispoList:refreshDispoTable()
+                    elseif area.typ == "su_scale" then
+                        -- Freischalt-Modus: Preis-Faktor +/- 0.05
+                        local now = g_currentMission.time or 0
+                        if DispoList.dlClickCooldown ~= nil and now - DispoList.dlClickCooldown < 250 then return end
+                        DispoList.dlClickCooldown = now
+                        if DL_SellpointUnlock ~= nil then
+                            DL_SellpointUnlock.guiScale(area.station, area.ftName, area.dir)
+                        end
                         DispoList:refreshDispoTable()
                     elseif area.typ == "bereich_expand" then
                         -- Akkordeon: aufgeklappten Bereich umschalten (nur einer offen)
@@ -1406,6 +1488,242 @@ function DL_FilterMenu_Draw.drawStationMode(x, y, w, h, col2X, colW, listStart, 
                 end
                 -- posYR um die Anzahl tatsächlicher Zeilen (= rowsPerCol) nach unten schieben
                 posYR = posYR - rowsPerCol * lineH
+            end
+        end
+    end
+    return totalLines
+end
+
+-- ── MODUS: Freischalten (Verkaufsstationen Zusatzwaren annehmen lassen) ──────
+-- Links: Stationsliste (wie Station-Modus). Rechts: flache Liste ALLER handelbaren
+-- Waren der Karte je gewaehlter Station: "# ab Werk" (grau, fix), "v freigeschaltet"
+-- (gruen, + Preis-Faktor), "- freischaltbar" (klick). Motor: DL_SellpointUnlock.
+function DL_FilterMenu_Draw.drawFreischaltMode(x, y, w, h, col2X, colW, listStart, listTop, size, lineH, difW, bgLine, scrollOffset, fOvGroup, fOvByName)
+    if DispoList.filterAllStations == nil then
+        DispoList.filterAllStations = DL_FilterMenu_Draw.buildStationList()
+    end
+
+    -- Linke Spalte: Stationsliste
+    local scrollL = DispoList.filterLeftScroll or 1
+    local lineIdx = 0
+    local posY    = listStart
+    for _, st in ipairs(DispoList.filterAllStations) do
+        lineIdx = lineIdx + 1
+        if lineIdx >= scrollL and posY >= y + lineH then
+            local isSel = (DispoList.filterSelStation == st.name)
+            if bgLine ~= nil then
+                g_currentMission.hlUtils.setOverlay(bgLine, x+difW*0.3, posY-lineH*0.4, colW-difW*0.6, lineH)
+                g_currentMission.hlUtils.setBackgroundColor(bgLine,
+                    isSel and {0.08,0.30,0.08,0.95} or {0.04,0.08,0.04,0.7})
+            end
+            setTextColor(isSel and 1.0 or 0.8, isSel and 0.85 or 0.8, isSel and 0.0 or 0.8, 1)
+            setTextBold(isSel)
+            setTextAlignment(RenderText.ALIGN_LEFT)
+            renderText(x + difW, posY, size * 1.0, utf8Substr(st.name, 0))
+            setTextBold(false)
+            table.insert(DispoList.filterLeftAreas, {
+                station=st.name,
+                x1=x+difW*0.3, y1=posY-lineH*0.4, x2=x+colW-difW*0.3, y2=posY+lineH*0.6
+            })
+            posY = posY - lineH
+        end
+    end
+
+    if DispoList.filterSelStation == nil then
+        setTextColor(0.45, 0.45, 0.45, 1)
+        renderText(col2X + difW, listTop - lineH * 1.8, size * 0.85, utf8Substr(DL_t("fs_hint_wahl"), 0))
+        return 0
+    end
+
+    -- Station-Objekt suchen
+    local stationObj = nil
+    for _, station in pairs(g_currentMission.storageSystem:getUnloadingStations()) do
+        if station:isa(SellingStation) and station:getName() == DispoList.filterSelStation then
+            stationObj = station
+            break
+        end
+    end
+    if stationObj == nil then return 0 end
+
+    -- Aktuelle Deals dieser Station (ftUpper -> priceScale)
+    local dealSet = {}
+    if DL_SellpointUnlock ~= nil then
+        for _, d in ipairs(DL_SellpointUnlock.deals or {}) do
+            if d.station == DispoList.filterSelStation then dealSet[d.fillType] = d.priceScale or 1 end
+        end
+    end
+
+    -- Native-Snapshot EINMALIG einfrieren (akzeptiert MINUS aktuelle Deals) --
+    -- so bleibt "ab Werk" stabil, auch wenn man einen Deal wieder entfernt.
+    DispoList.suNative = DispoList.suNative or {}
+    if DispoList.suNative[DispoList.filterSelStation] == nil then
+        local snap = {}
+        if stationObj.acceptedFillTypes ~= nil then
+            for ftIdx, acc in pairs(stationObj.acceptedFillTypes) do
+                if acc == true then
+                    local ft = g_fillTypeManager:getFillTypeByIndex(ftIdx)
+                    local nm = ft ~= nil and ft.name ~= nil and string.upper(ft.name) or nil
+                    if nm ~= nil and dealSet[nm] == nil then snap[nm] = true end
+                end
+            end
+        end
+        DispoList.suNative[DispoList.filterSelStation] = snap
+    end
+    local nativeSet = DispoList.suNative[DispoList.filterSelStation]
+
+    -- Rechts: Waren nach Bereichen gruppiert (Akkordeon wie Stations-Modus),
+    -- eingeklappt = uebersichtlich. Ein Bereich offen zur Zeit.
+    local bereiche = {}
+    local specialNames = {["Unverkaeuflich"]=true, ["Sonstiges"]=true}
+    for name, data in pairs(DispoList.BEREICHE) do
+        if not specialNames[name] then table.insert(bereiche, {name=name, order=data.order}) end
+    end
+    table.sort(bereiche, function(a,b) return string.lower(a.name) < string.lower(b.name) end)
+    if DispoList.BEREICHE["Sonstiges"] ~= nil then table.insert(bereiche, {name="Sonstiges", order=99}) end
+
+    local allFT = DL_FilterMenu_Draw.getAllMapFillTypes()
+    local assigned = {}
+    if DL_Filter.bereichZuordnung ~= nil then
+        for _, fts in pairs(DL_Filter.bereichZuordnung) do
+            for ftName, _ in pairs(fts) do assigned[ftName] = true end
+        end
+    end
+
+    local markerColW = getTextWidth(size * 1.1, "#") + difW * 1.4   -- Marker + Abstand
+    local stepW      = getTextWidth(size, "  [-] 0.00 [+] ")
+
+    local totalLines = 0
+    local posYR    = listStart
+    local lineIdxR = 0
+
+    for _, ber in ipairs(bereiche) do
+        -- Waren dieses Bereichs aus der handelbaren Karten-Warenliste
+        local berFTs = {}
+        if ber.name == "Sonstiges" then
+            for _, item in ipairs(allFT) do
+                if not assigned[item.ftName] then table.insert(berFTs, item) end
+            end
+        else
+            local z = DL_Filter.bereichZuordnung ~= nil and DL_Filter.bereichZuordnung[ber.name] or nil
+            if z ~= nil then
+                for _, item in ipairs(allFT) do
+                    if z[item.ftName] == true then table.insert(berFTs, item) end
+                end
+            end
+        end
+
+        -- Sortierung: "ab Werk" zuoberst, dann Zusatzabnahmen, dann restliche
+        -- (jeweils alphabetisch) -- Rang aus nativeSet/dealSet der gewaehlten Station.
+        table.sort(berFTs, function(a, b)
+            local ra = (nativeSet[string.upper(a.ftName)] and 0) or (dealSet[string.upper(a.ftName)] and 1) or 2
+            local rb = (nativeSet[string.upper(b.ftName)] and 0) or (dealSet[string.upper(b.ftName)] and 1) or 2
+            if ra ~= rb then return ra < rb end
+            return string.lower(a.title) < string.lower(b.title)
+        end)
+
+        if #berFTs > 0 then
+            local isExpanded = DispoList.filterExpandedBereich == ber.name
+            totalLines = totalLines + 1 + (isExpanded and #berFTs or 0)
+
+            -- Bereich-Kopf (klickbar = auf/zu)
+            lineIdxR = lineIdxR + 1
+            if lineIdxR >= scrollOffset and posYR >= y + lineH then
+                local nDeal = 0
+                for _, item in ipairs(berFTs) do
+                    if dealSet[string.upper(item.ftName)] ~= nil then nDeal = nDeal + 1 end
+                end
+                if bgLine ~= nil then
+                    g_currentMission.hlUtils.setOverlay(bgLine, col2X+difW*0.3, posYR-lineH*0.4, (w-colW)-difW*0.6, lineH)
+                    g_currentMission.hlUtils.setBackgroundColor(bgLine,
+                        isExpanded and {0.05,0.25,0.05,0.95} or {0.06,0.10,0.06,0.85})
+                    bgLine:render()
+                end
+                local eIconW = DL_FilterMenu_Draw.drawExpandIcon(fOvGroup, fOvByName, isExpanded, col2X+difW, posYR, lineH*0.6, difW)
+                setTextColor(0.95, 0.85, 0.1, 1); setTextBold(true); setTextAlignment(RenderText.ALIGN_LEFT)
+                local label = DL_bereichLabel(ber.name) .. "  (" .. #berFTs .. ")"
+                renderText(col2X + difW + eIconW, posYR, size * 1.05, utf8Substr(label, 0))
+                if nDeal > 0 then
+                    local baseW = getTextWidth(size * 1.05, label .. "   ")
+                    setTextColor(0.1, 1.0, 0.1, 1)
+                    renderText(col2X + difW + eIconW + baseW, posYR, size * 1.0, utf8Substr("v " .. nDeal, 0))
+                end
+                setTextBold(false)
+                table.insert(DispoList.filterRightAreas, {
+                    typ="bereich_expand", bereich=ber.name,
+                    x1=col2X+difW*0.3, y1=posYR-lineH*0.4, x2=x+w-difW*0.3, y2=posYR+lineH*0.6
+                })
+                posYR = posYR - lineH
+            end
+
+            -- Waren (nur wenn aufgeklappt)
+            if isExpanded then
+                -- Faktor-Spalte dynamisch aus laengstem Warennamen dieses Bereichs
+                local maxTitleW = 0
+                for _, item in ipairs(berFTs) do
+                    local tw = getTextWidth(size * 0.95, utf8Substr(item.title, 0))
+                    if tw > maxTitleW then maxTitleW = tw end
+                end
+                local markerX = col2X + difW * 1.6
+                local nameX   = markerX + markerColW
+                local stepX   = math.min(nameX + maxTitleW + difW * 2, x + w - difW - stepW)
+
+                for _, item in ipairs(berFTs) do
+                    lineIdxR = lineIdxR + 1
+                    if lineIdxR >= scrollOffset and posYR >= y + lineH then
+                        local ftUpper  = string.upper(item.ftName)
+                        local isDeal   = dealSet[ftUpper] ~= nil
+                        local isNative = nativeSet[ftUpper] == true
+                        if bgLine ~= nil and isDeal then
+                            g_currentMission.hlUtils.setOverlay(bgLine, col2X+difW*0.6, posYR-lineH*0.4, (w-colW)-difW*1.2, lineH)
+                            g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.05,0.18,0.05,0.85})
+                            bgLine:render()
+                        end
+                        local marker, mcol, tcol
+                        if isNative then
+                            marker = "#"; mcol = {0.45,0.45,0.45,1}; tcol = {0.5,0.5,0.5,1}
+                        elseif isDeal then
+                            marker = "v"; mcol = {0.1,1.0,0.1,1};   tcol = {0.1,1.0,0.1,1}
+                        else
+                            marker = "-"; mcol = {0.6,0.6,0.6,1};    tcol = {0.85,0.85,0.85,1}
+                        end
+                        setTextAlignment(RenderText.ALIGN_LEFT)
+                        setTextBold(true); setTextColor(table.unpack(mcol))
+                        renderText(markerX, posYR, size * 1.1, utf8Substr(marker, 0))
+                        setTextBold(false); setTextColor(table.unpack(tcol))
+                        renderText(nameX, posYR, size * 0.95, utf8Substr(item.title, 0))
+                        if not isNative then
+                            table.insert(DispoList.filterRightAreas, {
+                                typ="su_toggle", station=DispoList.filterSelStation, ftName=item.ftName,
+                                x1=markerX-difW*0.3, y1=posYR-lineH*0.4,
+                                x2=(isDeal and (stepX - difW) or (x+w-difW*0.3)), y2=posYR+lineH*0.6
+                            })
+                        end
+                        if isDeal then
+                            local scale  = dealSet[ftUpper]
+                            setTextColor(0.9,0.7,0.2,1); setTextBold(true)
+                            renderText(stepX, posYR, size, utf8Substr("[-]", 0))
+                            local minusW = getTextWidth(size, "[-] ")
+                            local vcol = scale > 1 and {0.1,1.0,0.1,1} or (scale < 1 and {1.0,0.6,0.1,1} or {0.85,0.85,0.85,1})
+                            setTextBold(false); setTextColor(table.unpack(vcol))
+                            local vStr = string.format("%.2f", scale)
+                            renderText(stepX + minusW, posYR, size, utf8Substr(vStr, 0))
+                            local valW = getTextWidth(size, vStr .. " ")
+                            setTextColor(0.9,0.7,0.2,1); setTextBold(true)
+                            renderText(stepX + minusW + valW, posYR, size, utf8Substr("[+]", 0))
+                            setTextBold(false)
+                            table.insert(DispoList.filterRightAreas, {
+                                typ="su_scale", station=DispoList.filterSelStation, ftName=item.ftName, dir=-1,
+                                x1=stepX-difW*0.3, y1=posYR-lineH*0.4, x2=stepX+minusW, y2=posYR+lineH*0.6
+                            })
+                            table.insert(DispoList.filterRightAreas, {
+                                typ="su_scale", station=DispoList.filterSelStation, ftName=item.ftName, dir=1,
+                                x1=stepX+minusW+valW-difW*0.3, y1=posYR-lineH*0.4,
+                                x2=stepX+minusW+valW+getTextWidth(size,"[+] "), y2=posYR+lineH*0.6
+                            })
+                        end
+                        posYR = posYR - lineH
+                    end
+                end
             end
         end
     end

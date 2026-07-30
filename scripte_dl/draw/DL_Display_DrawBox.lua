@@ -161,6 +161,19 @@ function DL_Display_DrawBox.setBox(args)
     if box.viewExtraLine then totalLines = totalLines + 1 end
     box.screen.bounds[4] = math.max(1, totalLines)
 
+    -- Baustellen-Ansicht: eigene Zeilenzahl fuer den Scroll-Bereich
+    -- (Kran-Rows + Icon-Zeile + Titel + Spaltenkopf = +3)
+    if DispoList.baustelleMode then
+        local n = (DispoList.baustelleRows and #DispoList.baustelleRows) or 0
+        if n < 1 then n = 1 end  -- sprechende Null-Zeile
+        -- aufgeklapptes Material: dessen Lager-Zeilen mit in die Scrollhoehe zaehlen
+        if DispoList.baustelleViewFt ~= nil then
+            local lg = DispoList.lagerCache and DispoList.lagerCache[DispoList.baustelleViewFt]
+            n = n + ((lg ~= nil and #lg > 0) and #lg or 1)
+        end
+        box.screen.bounds[4] = math.max(1, n + 3)
+    end
+
     local curM = g_currentMission.environment.currentPeriod or 1
 
     -- Box-Hintergrund-Alpha (3 Stufen: normal, hell, transparent)
@@ -197,8 +210,15 @@ function DL_Display_DrawBox.setBox(args)
             if a.clickAreaTable == nil then return end
             local wc  = a.clickAreaTable.whereClick
             local btn = a.button
-            -- dl_ware_ feuert bei isDown=false (mouseUp), alle anderen bei isDown=true
-            if wc ~= "dl_ware_" and not a.isDown then return end
+            -- dl_ware_ / dl_baumat_ feuern bei isDown=false (mouseUp), alle anderen bei isDown=true
+            if wc ~= "dl_ware_" and wc ~= "dl_baumat_" and not a.isDown then return end
+
+            -- Klick auf ein anderes Bedienelement bestaetigt die Suche (Fokus weg, Fahren frei).
+            -- Nur echte, registrierte Klicks -- nicht Lupe/Suchfeld selbst.
+            if DispoList.searchFocused and a.isDown
+               and wc ~= "dl_search_" and wc ~= "dl_searchfield_main_" then
+                DispoList.setSearchFocus(false)
+            end
 
             if wc == "dl_lineDistance_" then
                 -- Zeilenabstand: Links = mehr, Rechts = weniger
@@ -245,10 +265,20 @@ function DL_Display_DrawBox.setBox(args)
             elseif wc == "dl_search_" then
                 if btn == Input.MOUSE_BUTTON_LEFT and not (box.isSetting and box.settingTyp == 1) then
                     DispoList.searchActive = not DispoList.searchActive
-                    if not DispoList.searchActive then
+                    if DispoList.searchActive then
+                        -- Nur EINE Lupe aktiv: Filter-Suche zu, damit Getippe eindeutig hier landet
+                        if DispoList.resetSearch ~= nil then DispoList.resetSearch() end
+                        DispoList.setSearchFocus(true)   -- Lupe auf: tippen + Fahren sperren
+                    else
                         DispoList.searchText = ""
+                        DispoList.setSearchFocus(false)  -- Lupe zu: Fahren frei
                     end
                     DispoList.searchDirty = true
+                end
+            elseif wc == "dl_searchfield_main_" then
+                -- Klick aufs Suchfeld (nach Enter/Klick-weg): wieder tippen
+                if btn == Input.MOUSE_BUTTON_LEFT and DispoList.searchActive then
+                    DispoList.setSearchFocus(true)
                 end
             elseif wc == "dl_filter_" then
                 if btn == Input.MOUSE_BUTTON_LEFT then
@@ -281,6 +311,14 @@ function DL_Display_DrawBox.setBox(args)
                     box.needsUpdate = true
                 end
 
+            elseif wc == "dl_baustelleMode_" then
+                if btn == Input.MOUSE_BUTTON_LEFT then
+                    DispoList.baustelleMode = not (DispoList.baustelleMode == true)
+                    DispoList.baustelleViewFt = nil  -- Aufklappung beim Moduswechsel schliessen
+                    box.screen.bounds[1] = 1  -- Scroll zuruecksetzen beim Moduswechsel
+                    box.needsUpdate = true
+                end
+
             elseif wc == "dl_refresh_" then
                 -- L=Intervall hoeher, R=Intervall niedriger (wie Schrift/Zeilenabstand)
                 local steps = {5000, 15000, 30000, 60000, 120000, 0}
@@ -310,6 +348,22 @@ function DL_Display_DrawBox.setBox(args)
                             DispoList.lagerCache[ftName] = nil
                         else
                             DispoList.lagerViewFt = ftName
+                            DispoList.lagerCache[ftName] = DispoList.getLagerFuerFillType(ftName)
+                        end
+                        box.needsUpdate = true
+                    end
+                end
+
+            elseif wc == "dl_baumat_" then
+                -- Baustellen-Ansicht: Material aufklappen -> zeigt Lager (wie Hauptliste)
+                if btn == Input.MOUSE_BUTTON_LEFT then
+                    local ftName = a.clickAreaTable.ownTable and a.clickAreaTable.ownTable.ftName
+                    if ftName ~= nil then
+                        if DispoList.baustelleViewFt == ftName then
+                            DispoList.baustelleViewFt = nil
+                            DispoList.lagerCache[ftName] = nil
+                        else
+                            DispoList.baustelleViewFt = ftName
                             DispoList.lagerCache[ftName] = DispoList.getLagerFuerFillType(ftName)
                         end
                         box.needsUpdate = true
@@ -397,9 +451,9 @@ function DL_Display_DrawBox.setBox(args)
         -- 1. Filter
         local filterActive = DispoList.filterMenuOpen
         ixPos = drawPng("dl_png_filter", "icon_filter.dds", ixPos,
-            filterActive and {0.1, 0.9, 0.1, 1.0} or nil,
+            filterActive and {0.1, 1.0, 0.1, 1.0} or nil,
             {0.65, 0.65, 0.65, 1.0},
-            "dl_filter_", "Bereiche-Filter oeffnen/schliessen")
+            "dl_filter_", DL_t("tooltip_bereichefilter"))
 
         -- 2. Sortierung
         local sortOn = DispoList.sortByValue
@@ -407,8 +461,8 @@ function DL_Display_DrawBox.setBox(args)
             sortOn and {0.2, 0.8, 1.0, 1.0} or nil,
             {0.65, 0.65, 0.65, 1.0},
             "dl_sortToggle_",
-            sortOn and "Sortierung: nach Erloesweert (klick fuer A-Z)"
-                    or "Sortierung: A-Z (klick fuer Erloesweert)")
+            sortOn and DL_t("tooltip_sort_byvalue")
+                    or DL_t("tooltip_sort_byname"))
 
         -- 3. Suche
         local sActive = DispoList.searchActive
@@ -416,35 +470,54 @@ function DL_Display_DrawBox.setBox(args)
             sActive and {0.2, 0.8, 1.0, 1.0} or nil,
             {0.65, 0.65, 0.65, 1.0},
             "dl_search_",
-            sActive and "Suche schliessen  |  Achtung: Tasten steuern weiterhin das Fahrzeug!" or "Suche oeffnen  |  Achtung: Tasten steuern weiterhin das Fahrzeug - besser im Menue oder ausgestiegem benutzen!")
+            sActive and DL_t("tooltip_search_close") or DL_t("tooltip_search_open"))
 
         -- Suchfeld rechts neben der Lupe
         if sActive then
-            local cursor = DispoList.searchCursorVisible and "|" or " "
-            local searchDisplay = DispoList.searchText .. cursor
-            setTextColor(0.0, 1.0, 0.8, 1)
+            local focused = DispoList.searchFocused
+            local cursor  = (focused and DispoList.searchCursorVisible) and "|" or ""
+            local shown   = DispoList.searchText .. cursor
+            if shown == "" then shown = " " end
             setTextAlignment(RenderText.ALIGN_LEFT)
+            setTextBold(focused)
+            local fieldX1 = ixPos
+            local textW   = getTextWidth(size, shown)
+            local fieldX2 = fieldX1 + textW + difW * 2
+            -- Fokus-Hintergrund: unuebersehbare helle Box hinter dem Suchtext (nur bei Fokus)
+            if focused and bgLine ~= nil then
+                g_currentMission.hlUtils.setOverlay(bgLine, fieldX1 - difW * 0.6, iconPosY - iconH * 0.30,
+                    (fieldX2 - fieldX1) + difW * 0.4, iconH * 1.20)
+                g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.0, 0.42, 0.36, 0.90})
+                bgLine:render()
+            end
+            -- fokussiert = helles Cyan + fett (tippt), Ruhe = gedimmtes Grau (bestaetigt)
+            if focused then setTextColor(0.55, 1.0, 0.92, 1) else setTextColor(0.5, 0.5, 0.5, 1) end
+            renderText(fieldX1, iconPosY, size, utf8Substr(shown, 0))
             setTextBold(false)
-            renderText(ixPos, iconPosY, size, utf8Substr(searchDisplay, 0))
-            ixPos = ixPos + getTextWidth(size, searchDisplay) + difW
+            ixPos = fieldX2
+            -- Klickbereich ueber dem Suchtext -> wieder tippen
+            if inArea and not g_currentMission.hlUtils:disableInArea() then
+                box:setClickArea({fieldX1 - difW, ixPos, iconPosY - iconH * 0.3, iconPosY + iconH * 0.7,
+                    onClick = box.onSettingClick, whereClick = "dl_searchfield_main_", typPos = args.typPos})
+            end
         end
 
         -- 5. Zeilenabstand
         ixPos = drawPng("dl_png_zeilenabstand", "icon_zeilenabstand.dds", ixPos,
             nil, {0.65, 0.65, 0.65, 1.0},
-            "dl_lineDistance_", "Zeilenabstand aendern (L=groesser / R=kleiner)")
+            "dl_lineDistance_", DL_t("tooltip_linedistance"))
 
         -- 6. Schriftgroesse
         ixPos = drawPng("dl_png_schrift", "icon_schrift.dds", ixPos,
             nil, {0.65, 0.65, 0.65, 1.0},
-            "dl_zoomToggle_", "Schriftgroesse (L=groesser / R=kleiner)")
+            "dl_zoomToggle_", DL_t("tooltip_fontsize"))
 
         -- 7. Einstellungen (Spalten)
         local gbOpen = DL_ColSettings ~= nil and DL_ColSettings.guiBox ~= nil and DL_ColSettings.guiBox.show
         ixPos = drawPng("dl_png_einstellungen", "icon_einstellungen.dds", ixPos,
             gbOpen and {0.2, 0.8, 1.0, 1.0} or nil,
             {0.65, 0.65, 0.65, 1.0},
-            "dl_colSettings_", "Einstellungen: Spalten ein/ausschalten, Fabrikpuffer")
+            "dl_colSettings_", DL_t("tooltip_settings"))
 
         -- Hintergrund-Transparenz Toggle (3 Stufen)
         local alphaIdx = box.ownTable.bgAlphaIdx or 1
@@ -452,15 +525,24 @@ function DL_Display_DrawBox.setBox(args)
         ixPos = drawPng("dl_png_bgalpha", "icon_sortierung.dds", ixPos,
             alphaIdx ~= 1 and alphaCol or nil,
             {0.65, 0.65, 0.65, 1.0},
-            "dl_bgAlpha_", "Hintergrund: hell/dunkel/transparent umschalten (L-Klick)")
+            "dl_bgAlpha_", DL_t("tooltip_bgalpha"))
 
         -- CW only Toggle-Button (Stern-Icon)
         local zlActive = DispoList._zlFilterActive or false
         ixPos = drawPng("dl_png_zl_stern", "icon_zl_stern.dds", ixPos,
-            zlActive and {0.2, 0.9, 0.2, 1.0} or nil,
+            zlActive and {0.1, 1.0, 0.1, 1.0} or nil,
             {0.65, 0.65, 0.65, 1.0},
             "dl_zlFilter_",
             DL_t("tooltip_cwonly"))
+
+        -- Baustellen-Ansicht Toggle (Kran-Icon) -- immer sichtbar, sprechende Null
+        -- uebernimmt den Leerzustand (Entscheidung 20.07.)
+        local bmActive = DispoList.baustelleMode == true
+        ixPos = drawPng("dl_png_baustelle", "icon_baustelle.dds", ixPos,
+            bmActive and {0.1, 1.0, 0.1, 1.0} or nil,
+            {0.65, 0.65, 0.65, 1.0},
+            "dl_baustelleMode_",
+            DL_t("tooltip_baustellemode"))
 
         -- Trenner |
         setTextColor(0.35, 0.35, 0.35, 1)
@@ -471,7 +553,7 @@ function DL_Display_DrawBox.setBox(args)
         -- Refresh-Icon (vorhanden) direkt vor dem Timer
         ixPos = drawPng("dl_png_refresh", "icon_refresh.dds", ixPos,
             nil, {0.65, 0.65, 0.65, 1.0},
-            "dl_refresh_", "Refresh-Intervall: MouseL=hoeher / MouseR=niedriger (kuerzere Intervalle = mehr Performance-Last)")
+            "dl_refresh_", DL_t("tooltip_refresh"))
 
         -- Refresh-Timer
         local sinceMs  = DispoList.refreshSinceMs or 0
@@ -498,6 +580,139 @@ function DL_Display_DrawBox.setBox(args)
         setTextBold(false)
         setTextAlignment(RenderText.ALIGN_LEFT)
         renderText(ixPos, iconPosY + iconH * 0.22, size * 0.8, refreshStr)
+    end
+
+    -- ══ BAUSTELLEN-ANSICHT (Kran-Toggle) ════════════════════════════════════
+    -- Ersetzt die komplette Verkaufsliste durch eine reine Bedarfsliste:
+    -- pro Baustelle ein Block, je Material eine Zeile "Name / braucht / im Lager".
+    -- Kein Prozent, kein Stern, kein Drill-In (bewusst schlank, Entscheidung 20.07.).
+    if DispoList.baustelleMode then
+        local rows     = DispoList.baustelleRows or {}
+        local numW     = getTextWidth(size, utf8Substr(g_i18n:formatVolume(9999999, 0), 0)) + gap
+        local rLager   = x + w - difW * 1.5
+        local rBraucht = rLager - numW - gap
+        local nameX    = x + difW * 2.2
+
+        -- Titelzeile
+        local titY = iconLineY - lineH * 1.15
+        setTextColor(0.95, 0.85, 0.1, 1); setTextBold(true)
+        setTextAlignment(RenderText.ALIGN_LEFT)
+        renderText(x + difW, titY, size * 1.25, utf8Substr(DL_t("baustelle_titel"), 0))
+        setTextBold(false)
+
+        -- Spaltenkoepfe (braucht / im Lager)
+        local hY = titY - lineH * 1.0
+        setTextColor(0.75, 0.75, 0.75, 1)
+        setTextAlignment(RenderText.ALIGN_RIGHT)
+        renderText(rBraucht, hY, size, utf8Substr(DL_t("spalte_braucht"), 0))
+        renderText(rLager,   hY, size, utf8Substr(DL_t("spalte_imlager"), 0))
+        setTextColor(1, 1, 1, 1)
+
+        local nextPosY   = hY - lineH * 0.8
+        local scrollOffB = box.screen.bounds[1] or 1
+        local lineIdxB   = 0
+
+        if #rows == 0 then
+            setTextAlignment(RenderText.ALIGN_CENTER)
+            setTextColor(1, 0.85, 0, 1); setTextBold(false)
+            renderText(x + w * 0.5, nextPosY, size * 0.95, utf8Substr(DL_t("baustelle_leer"), 0))
+            setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(1, 1, 1, 1)
+            return
+        end
+
+        for _, r in ipairs(rows) do
+            lineIdxB = lineIdxB + 1
+            if lineIdxB >= scrollOffB and nextPosY >= y then
+                if r.kind == "proj" then
+                    local bg = box.overlays.bgLine
+                    if bg ~= nil then
+                        g_currentMission.hlUtils.setOverlay(bg, x + difW, nextPosY + lineH * 0.85, w - difW * 2, box.screen.pixelH)
+                        g_currentMission.hlUtils.setBackgroundColor(bg, {0.95, 0.75, 0.1, 0.6})
+                        bg:render()
+                    end
+                    setTextBold(true); setTextColor(0.95, 0.75, 0.1, 1)
+                    setTextAlignment(RenderText.ALIGN_LEFT)
+                    renderText(x + difW, nextPosY, size * 1.15, utf8Substr(r.name or "?", 0))
+                    setTextBold(false); setTextColor(1, 1, 1, 1)
+                    nextPosY = nextPosY - lineH
+                    if nextPosY < y then break end
+                else
+                    local enough = (r.stock or 0) >= (r.needed or 0)
+                    local isOpen = (r.ftName ~= nil and DispoList.baustelleViewFt == r.ftName)
+                    -- Aufklapp-Markierung (kleines v) links vom Namen wenn offen
+                    if isOpen then
+                        setTextColor(0.0, 0.85, 1.0, 1)
+                        setTextAlignment(RenderText.ALIGN_LEFT)
+                        renderText(x + difW * 0.7, nextPosY, size * 0.8, utf8Substr("v", 0))
+                    end
+                    setTextAlignment(RenderText.ALIGN_LEFT)
+                    -- Warenname gruen sobald genug im Lager, sonst weiss (wie die Lager-Zahl)
+                    if enough then setTextColor(0.1, 1.0, 0.1, 1) else setTextColor(1, 1, 1, 1) end
+                    renderText(nameX, nextPosY, size, utf8Substr(r.name or "?", 0))
+                    setTextAlignment(RenderText.ALIGN_RIGHT)
+                    setTextColor(1.0, 0.80, 0.0, 1)
+                    renderText(rBraucht, nextPosY, size, utf8Substr(fmtVol(r.needed or 0), 0))
+                    setTextColor(enough and 0.1 or 0.95, enough and 1.0 or 0.55, 0.1, 1)
+                    renderText(rLager, nextPosY, size, utf8Substr(fmtVol(r.stock or 0), 0))
+                    setTextColor(1, 1, 1, 1)
+                    -- Klick-Area ueber die ganze Materialzeile -> Lager auf/zuklappen
+                    if r.ftName ~= nil and inArea and not g_currentMission.hlUtils:disableInArea() then
+                        box:setClickArea({x, x + w, nextPosY - lineH * 0.1, nextPosY + lineH * 0.9,
+                            onClick=box.onSettingClick, whereClick="dl_baumat_",
+                            ownTable={ftName=r.ftName}, typPos=args.typPos})
+                    end
+                    nextPosY = nextPosY - lineH
+                    if nextPosY < y then break end
+
+                    -- Drill-Down: Lager-Zeilen wenn dieses Material aufgeklappt (wie Hauptliste)
+                    if isOpen then
+                        local lager = DispoList.lagerCache[r.ftName] or {}
+                        if #lager == 0 then
+                            lineIdxB = lineIdxB + 1
+                            setTextAlignment(RenderText.ALIGN_LEFT)
+                            setTextColor(0.5, 0.5, 0.5, 1); setTextBold(false)
+                            renderText(nameX + difW * 2, nextPosY, size, utf8Substr(DL_t("hint_kein_lager"), 0))
+                            setTextColor(1, 1, 1, 1)
+                            nextPosY = nextPosY - lineH
+                            if nextPosY < y then break end
+                        else
+                            local maxNameW = 0
+                            for _, lag in ipairs(lager) do
+                                local tw = getTextWidth(size, utf8Substr((lag.name or "?") .. "  ", 0))
+                                if tw > maxNameW then maxNameW = tw end
+                            end
+                            local lagerNameX  = nameX + difW * 2
+                            local rightEdge   = rLager
+                            local lagerMengeX = math.min(lagerNameX + maxNameW + difW, rightEdge)
+                            local broke = false
+                            for _, lag in ipairs(lager) do
+                                lineIdxB = lineIdxB + 1
+                                setTextAlignment(RenderText.ALIGN_LEFT)
+                                -- Lager-Zeilen im gleichen Blau wie das Aufklapp-"v"
+                                setTextColor(0.0, 0.85, 1.0, 1); setTextBold(false)
+                                renderText(lagerNameX, nextPosY, size, utf8Substr(lag.name or "?", 0))
+                                setTextAlignment(RenderText.ALIGN_RIGHT)
+                                setTextColor(0.35, 0.72, 0.90, 1)
+                                local capTxt
+                                if lag.capacity ~= nil and lag.capacity > 0 then
+                                    capTxt = fmtVol(lag.level) .. " / " .. fmtVol(lag.capacity) .. " l"
+                                else
+                                    capTxt = fmtVol(lag.level) .. " l"
+                                end
+                                renderText(math.min(lagerMengeX + getTextWidth(size, utf8Substr(capTxt .. " ", 0)), rightEdge),
+                                    nextPosY, size, utf8Substr(capTxt, 0))
+                                setTextColor(1, 1, 1, 1)
+                                nextPosY = nextPosY - lineH
+                                if nextPosY < y then broke = true; break end
+                            end
+                            if broke then break end
+                        end
+                    end
+                end
+            end
+        end
+        setTextBold(false); setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(1, 1, 1, 1)
+        return
     end
 
 
@@ -568,14 +783,14 @@ function DL_Display_DrawBox.setBox(args)
         if ecInstalled then
             setTextColor(0.55, 0.55, 0.55, 1)
             setTextBold(false)
-            renderText(x + difW + iconW + difW, baustellenLabelY, size * 0.7, utf8Substr("Fabrikpuffer / Baustelle", 0))
+            renderText(x + difW + iconW + difW, baustellenLabelY, size * 0.7, utf8Substr(DL_t("label_fabrikpuffer_baustelle"), 0))
             setTextColor(1, 1, 1, 1)
         end
 
         local pufferH = math.floor((DispoList.reserveStunden or 24))
-        local freiInfo = "Frei = Bestand abzueglich " .. pufferH .. "h Fabrikpuffer"
+        local freiInfo = string.format(DL_t("freiinfo_base"), pufferH)
         if ecInstalled and DispoList.ecEnabled then
-            freiInfo = freiInfo .. " + Baustellen-Bedarf"
+            freiInfo = freiInfo .. DL_t("freiinfo_ecsuffix")
         end
         setTextColor(0.1, 1.0, 0.1, 1)
         setTextBold(false)
@@ -835,12 +1050,13 @@ function DL_Display_DrawBox.setBox(args)
                                 lineIdx = lineIdx + 1
                                 if lineIdx >= scrollOffset and nextPosY >= y then
                                     setTextAlignment(RenderText.ALIGN_LEFT)
-                                    setTextColor(1, 1, 1, 1)
+                                    -- Lager-Zeilen im gleichen Blau wie das Aufklapp-"v" (bessere Sichtbarkeit)
+                                    setTextColor(0.0, 0.85, 1.0, 1)
                                     setTextBold(false)
                                     renderText(lagerNameX, nextPosY, size,
                                         utf8Substr(lag.name or "?", 0))
                                     setTextAlignment(RenderText.ALIGN_RIGHT)
-                                    setTextColor(0.70, 0.70, 0.70, 1)
+                                    setTextColor(0.35, 0.72, 0.90, 1)
                                     local capTxt
                                     if lag.capacity ~= nil and lag.capacity > 0 then
                                         capTxt = fmtVol(lag.level) .. " / " .. fmtVol(lag.capacity) .. " l"
