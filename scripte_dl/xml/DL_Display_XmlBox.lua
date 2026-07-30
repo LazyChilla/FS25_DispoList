@@ -10,7 +10,7 @@ function DL_Display_XmlBox:loadBox(name, onSave)
                 height           = 200,
                 info             = "DispoList\nLagerbestand + Bestpreise",
                 autoZoomOutIn    = "text",
-                hiddenMod        = "FS25_DispoList",
+                hiddenMod        = "DispoList",
                 show             = false,
                 loadDefaultIcons = true,   -- loadIcons aus icons.xml laden (textUp, textDown, lineHorizontalUpDown, search ...)
             }
@@ -40,10 +40,12 @@ function DL_Display_XmlBox:loadBox(name, onSave)
                     end
                 end
                 if DL_ColSettings ~= nil then DL_ColSettings.guiBox = nil end
+                if DispoList.resetMainSearch ~= nil then DispoList.resetMainSearch() end
                 local fbox = g_currentMission.hlHudSystem.hlBox:getData("DL_Filter_Box")
                 if fbox ~= nil and fbox.show then
                     fbox.show = false
                     DispoList.filterMenuOpen = false
+                    if DispoList.resetSearch ~= nil then DispoList.resetSearch() end
                     -- Pause aufheben falls aktiv
                     if DispoList.filterPauseEnabled then
                         if DispoList.previousTimeScale ~= nil then
@@ -75,7 +77,7 @@ function DL_Display_XmlBox:loadBox(name, onSave)
                 height           = 300,
                 info             = "DispoList\nFilter-Einstellungen",
                 autoZoomOutIn    = "text",
-                hiddenMod        = "FS25_DispoList",
+                hiddenMod        = "DispoList",
                 show             = false,
                 loadDefaultIcons = true,
             }
@@ -99,6 +101,7 @@ function DL_Display_XmlBox:loadBox(name, onSave)
             if args.clickAreaTable ~= nil and
                args.clickAreaTable.areaClick == "closeIcon_" then
                 DispoList.filterMenuOpen = false
+                if DispoList.resetSearch ~= nil then DispoList.resetSearch() end
                 if DispoList.filterPauseEnabled then
                     if DispoList.previousTimeScale ~= nil then
                         g_currentMission.timeScale = DispoList.previousTimeScale

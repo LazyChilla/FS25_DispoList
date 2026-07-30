@@ -53,6 +53,7 @@ function DL_ColSettings:createGuiBox()
         title        = "DispoList: Einstellungen",
         viewMaxLines = #self.COLS + 23,
         ownTable     = {},
+        onOverGuiBoxHudSystem = true,
     })
 
     -- getLine Funktion: lineCallSequence-basiert (korrekt, unabhängig von bounds)
