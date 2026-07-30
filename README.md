@@ -591,3 +591,14 @@ En principio compatible con MP — cada jugador necesita el mod. **No probado of
 ---
 
 *Built with ❤️ for the FS25 community*
+
+
+## Changelog
+
+### v1.3.0.0
+**DE:** Neuer Reiter „Zusatzabnahme" — eigene Verkaufsstationen fuer zusaetzliche Waren freischalten (nach Bereich gruppiert, mit einstellbarem Preisfaktor, im Savegame gespeichert). Neue Baustellen-Ansicht mit offenem Materialbedarf je Baustelle und Lager-Aufklappung pro Material. Ueberarbeitete Suche: Fahren wird beim Tippen gesperrt, Enter oder ein Klick woanders bestaetigt. Neues HUD-Icon. Aktualisiert fuer die laufende FS25-Version. Der Mehrspieler-Abgleich der Zusatzabnahme ist implementiert, im Coop aber noch nicht final getestet.
+**EN:** New "Extra offtake" tab — unlock your own selling stations for additional goods (grouped by zone, with an adjustable price factor, saved with the savegame). New construction-site view with the open material demand per site and per-material storage drill-down. Reworked search: driving is blocked while typing, Enter or a click elsewhere confirms. New HUD icon. Updated for the current FS25 version. Multiplayer sync for the extra offtake is implemented but not yet fully tested in co-op.
+
+### v1.2.6.x
+**DE:** Baustellen-Bedarf (EverythingConstructable) wird automatisch von der freien Menge abgezogen; g_farmCore-Export erweitert.
+**EN:** Construction-site demand (EverythingConstructable) is automatically deducted from the free amount; g_farmCore export extended.
