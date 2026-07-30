@@ -1,6 +1,6 @@
 # FS25 DispoList
 <p align="center">
-  <img src="DispoList-ModVorschau.png" width="128" alt="DispoList Icon">
+<img src="DispoList-ModVorschau.png" width="128" alt="DispoList Icon">
 </p>
 **🇩🇪 [Deutsch](#deutsch)** | **🇬🇧 [English](#english)** | **🇫🇷 [Français](#français)** | **🇮🇹 [Italiano](#italiano)** | **🇵🇹 [Português](#português)** | **🇪🇸 [Español](#español)**
 
@@ -22,17 +22,19 @@
 
 DispoList ist ein HUD-Mod für Farming Simulator 25 der dir einen schnellen Überblick über deine Lagerbestände und die besten Verkaufspreise gibt — direkt im Spiel, ohne Menüs.
 
-Besonderheit: Die **freien Waren** werden automatisch errechnet — also was deine Produktionen gerade erzeugen und nicht selbst weiterverarbeiten. Der Produktionspuffer (wie viel im Lager bleibt bevor es als "frei" gilt) ist einstellbar. So siehst du auf einen Blick was du verkaufen oder weiterliefern kannst.
+Besonderheit: Die **freien Waren** werden automatisch errechnet — also was deine Produktionen gerade erzeugen und nicht selbst weiterverarbeiten. Von der „freien" Menge wird der einstellbare Produktionspuffer abgezogen und — falls [EverythingConstructable](https://farming-simulator.com) läuft — zusätzlich der noch offene Baustellen-Bedarf. So siehst du auf einen Blick, was du wirklich verkaufen oder weiterliefern kannst.
 
 ### Features
 
-- 🔄 **Freie Waren** — Automatische Berechnung was aus Produktionen zum Verkauf/Transport verfügbar ist
+- 🔄 **Freie Waren** — Automatische Berechnung was aus Produktionen zum Verkauf/Transport verfügbar ist (abzüglich Produktionspuffer und — falls EverythingConstructable läuft — dem offenen Baustellen-Bedarf)
 - 📦 **Lagerbestand** — Aktueller Bestand und freie Kapazität pro Ware
 - 🔎 **Lageransicht** — Klick auf eine Ware zeigt, in welchem Lager wie viel liegt (Zentrallager, Silos, Tierhaltung, Fabrik-Ausgänge u.v.m.)
 - 🧮 **Lagertypen wählbar** — selbst bestimmen was mitgezählt wird (Zentrallager, Silos, Silo-Extensions, Tierhaltung, Misthaufen, Fahrsilo, Objektlager, Fabrik-Ausgänge)
 - 💰 **Bestpreise** — Bester und maximaler Verkaufspreis pro Ware und Monat
 - 🔵 **Blaue Hervorhebung** — Waren, deren bester Verkaufsmonat gerade jetzt ist, werden **blau** markiert — dann lohnt sich der Verkauf am meisten
 - 🏗️ **Baustellen-Bedarf** — Optional, mit [EverythingConstructable](https://farming-simulator.com): reserviert automatisch das noch benötigte Material offener Bauprojekte von der freien Menge (zusätzlich zum Fabrik-Puffer), damit du nicht versehentlich Material wegverkaufst, das du selbst für die Baustelle brauchst. Ein-/ausschaltbar direkt per Klick auf die Frei-Erklärungszeile im Haupt-HUD; nur sichtbar, wenn der Mod installiert ist
+- 🧱 **Baustellen-Ansicht** — Eigene Ansicht (Kran-Icon), die pro offener Baustelle den noch fehlenden Materialbedarf auflistet; Klick auf ein Material klappt auf, in welchen Lagern die Ware liegt
+- 🤝 **Zusatzabnahme** — Schalte eigene Verkaufsstationen frei, damit sie **zusätzliche Waren** annehmen, die sie normalerweise nicht kaufen (z. B. Baustoffe oder Diesel am Baumarkt). Einstellbarer Preisfaktor je Ware, nach Bereich gruppiert, wird im Savegame gespeichert
 - 🏭 **Gesamtwert** — Wert aller freier Waren pro Station
 - 🗂️ **Bereiche** — Waren nach eigenen Kategorien gruppieren (z.B. Getreide, Flüssig, Kühlung)
 - ✏️ **Bereiche verwalten** — eigene Bereiche anlegen, umbenennen und löschen
@@ -40,9 +42,9 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 - ⭐ **CW only** — Nur Zentrallager-Bereiche anzeigen (ideal für NF Marsch)
 - 🔍 **Suche** — Schnellsuche nach Waren oder Stationen
 - 🎛️ **Presets** — Vorgefertigte Bereiche-Konfigurationen:
-  - *Selbst*: deine eigene Einteilung bleibt erhalten
-  - *Zentrallager*: optimiert für Karten mit Zentrallager (z.B. NF Marsch)
-  - *Giants*: Standard-Kategorien aus dem Spiel
+- *Selbst*: deine eigene Einteilung bleibt erhalten
+- *Zentrallager*: optimiert für Karten mit Zentrallager (z.B. NF Marsch)
+- *Giants*: Standard-Kategorien aus dem Spiel
 - ⏱️ **Refresh-Intervall** — Einstellbar (5s / 15s / 30s / 60s / 120s / manuell) für optimale Performance
 - 🌗 **Kontrast/Transparenz** — Box-Hintergrund in 3 Stufen (hell / dunkel / transparent)
 - 📜 **Mausrad-Scrollen** — in beiden Listen bequem per Mausrad blättern
@@ -79,6 +81,8 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 | Listen scrollen | Mausrad |
 | CW only Toggle | Stern-Icon ⭐ in der Icon-Leiste |
 | Baustellen-Bedarf ein/aus | Klick auf die Frei-Erklärungszeile im Haupt-HUD (nur sichtbar mit EverythingConstructable) |
+| Baustellen-Ansicht ein/aus | Klick auf das Kran-Icon in der Icon-Leiste |
+| Zusatzabnahme freischalten | Filter-HUD → Reiter „Zusatzabnahme" → Ware anklicken; Preisfaktor mit `[−]` / `[+]` |
 | Refresh-Intervall | Einstellbar im Einstellungsmenü |
 
 ### Einstellungsmenü
@@ -93,6 +97,8 @@ Ein Klick auf das **Einstellungen-Icon** in der Icon-Leiste öffnet das Einstell
 > 💡 **Gut zu wissen:** Sobald du die Liste nach **Wert** sortierst (Klick auf das Sortier-Icon), pausiert der automatische Refresh und zeigt „Pausiert" an. Das ist Absicht — sonst würden die Zeilen bei jeder Aktualisierung ihre Plätze tauschen und die Liste würde dir wegspringen. Zurück auf **A–Z**, und der Refresh läuft wieder ganz normal.
 
 > 🏗️ **Baustellen-Bedarf:** Ist [EverythingConstructable](https://farming-simulator.com) installiert, erscheint über der Frei-Erklärung eine zusätzliche Zeile „Fabrikpuffer / Baustelle". Der Erklärsatz darunter zeigt automatisch an, ob Baustellen-Bedarf gerade mit abgezogen wird — ein Klick darauf schaltet es um.
+
+> 🤝 **Zusatzabnahme:** Über den Reiter „Zusatzabnahme" im Filter-HUD schaltest du eigenen Verkaufsstationen zusätzliche Waren frei, die sie sonst nicht annehmen. Die Waren sind nach Bereich gruppiert; „ab Werk" (schon von Haus aus angenommen) steht oben. Der Preisfaktor je Ware ist einstellbar, und die Freischaltungen bleiben im Savegame erhalten.
 
 ### Multiplayer
 
@@ -122,17 +128,19 @@ Grundsätzlich MP-fähig — jeder Spieler benötigt den Mod. **Nicht offiziell 
 
 DispoList is a HUD mod for Farming Simulator 25 that gives you a quick overview of your storage levels and the best selling prices — directly in-game, without any menus.
 
-Special feature: **Free goods** are calculated automatically — meaning what your productions are currently generating and not processing further. The production buffer (how much stays in storage before it counts as "free") is configurable. So you can see at a glance what you can sell or deliver.
+Special feature: **Free goods** are calculated automatically — meaning what your productions are currently generating and not processing further. From the "free" amount it subtracts the configurable production buffer and — if [EverythingConstructable](https://farming-simulator.com) is running — also the still-open construction-site demand. So you can see at a glance what you can really sell or deliver.
 
 ### Features
 
-- 🔄 **Free goods** — Automatic calculation of what is available from productions for sale/transport
+- 🔄 **Free goods** — Automatic calculation of what is available from productions for sale/transport (after subtracting the production buffer and — if EverythingConstructable is running — the open construction-site demand)
 - 📦 **Stock** — Current stock and free capacity per product
 - 🔎 **Storage view** — Click a product to see which storage holds how much (central warehouse, silos, animal pens, factory outputs and more)
 - 🧮 **Selectable storage types** — Decide yourself what gets counted (central warehouse, silos, silo extensions, animal pens, manure heaps, bunker silos, object storage, factory outputs)
 - 💰 **Best prices** — Best and maximum selling price per product and month
 - 🔵 **Blue highlight** — Goods whose best selling month is right now are marked **blue** — that's when selling pays off most
 - 🏗️ **Construction site demand** — Optional, with [EverythingConstructable](https://farming-simulator.com): automatically reserves material still needed for open construction projects from the free amount (on top of the factory buffer), so you don't accidentally sell off material you need for your own site. Toggle directly by clicking the free-amount explanation line in the main HUD; only visible if the mod is installed
+- 🧱 **Construction view** — A dedicated view (crane icon) listing the still-missing material demand per open construction site; clicking a material expands which storages hold that product
+- 🤝 **Extra offtake** — Unlock your own selling stations so they accept **additional goods** they normally wouldn't buy (e.g. building materials or diesel at the hardware store). Adjustable price factor per product, grouped by zone, saved with your savegame
 - 🏭 **Total value** — Value of all free goods per station
 - 🗂️ **Zones** — Group products into custom categories (e.g. Grain, Liquid, Cooling)
 - ✏️ **Manage zones** — Create, rename and delete your own zones
@@ -140,9 +148,9 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 - ⭐ **CW only** — Show central warehouse zones only (ideal for NF Marsch)
 - 🔍 **Search** — Quick search for products or stations
 - 🎛️ **Presets** — Preset zone configurations:
-  - *Custom*: keep your own zone setup
-  - *Central WH*: optimised for maps with central warehouse (e.g. NF Marsch)
-  - *Giants*: default categories from the base game
+- *Custom*: keep your own zone setup
+- *Central WH*: optimised for maps with central warehouse (e.g. NF Marsch)
+- *Giants*: default categories from the base game
 - ⏱️ **Refresh interval** — Configurable (5s / 15s / 30s / 60s / 120s / manual) for optimal performance
 - 🌗 **Contrast/Transparency** — Box background in 3 levels (bright / dark / transparent)
 - 📜 **Mouse wheel scrolling** — Scroll both lists conveniently with the mouse wheel
@@ -179,6 +187,8 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 | Scroll lists | Mouse wheel |
 | CW only toggle | Star icon ⭐ in icon bar |
 | Toggle construction site demand | Click the free-amount explanation line in the main HUD (only visible with EverythingConstructable) |
+| Toggle construction view | Click the crane icon in the icon bar |
+| Unlock extra offtake | Filter HUD → "Extra offtake" tab → click a product; price factor with `[−]` / `[+]` |
 | Refresh interval | Configurable in the settings menu |
 
 ### Settings menu
@@ -193,6 +203,8 @@ Clicking the **settings icon** in the icon bar opens the settings menu — every
 > 💡 **Good to know:** As soon as you sort the list by **value** (click the sort icon), the automatic refresh pauses and shows "Paused". That's intentional — otherwise the rows would swap places on every update and the list would jump away from you. Switch back to **A–Z** and the refresh runs normally again.
 
 > 🏗️ **Construction site demand:** If [EverythingConstructable](https://farming-simulator.com) is installed, an extra line "Factory buffer / construction site" appears above the free-amount explanation. The sentence below it automatically shows whether construction site demand is currently being deducted — click it to toggle.
+
+> 🤝 **Extra offtake:** Via the "Extra offtake" tab in the filter HUD you can unlock additional goods for your own selling stations that they otherwise wouldn't accept. Goods are grouped by zone; "factory default" (already accepted) is listed on top. The price factor per product is adjustable, and the unlocks are saved with your savegame.
 
 ### Multiplayer
 
@@ -222,17 +234,19 @@ Generally MP-capable — each player needs the mod. **Not officially tested**, u
 
 DispoList est un mod HUD pour Farming Simulator 25 qui vous donne un aperçu rapide de vos stocks et des meilleurs prix de vente — directement dans le jeu, sans menus.
 
-Particularité: Les **produits libres** sont calculés automatiquement — ce que vos productions génèrent et ne traitent pas elles-mêmes. Le tampon de production est configurable. Vous voyez d'un coup d'œil ce que vous pouvez vendre ou livrer.
+Particularité: Les **produits libres** sont calculés automatiquement — ce que vos productions génèrent et ne traitent pas elles-mêmes. De la quantité « libre » sont déduits le tampon de production réglable et — si [EverythingConstructable](https://farming-simulator.com) est actif — le besoin de chantier encore ouvert. Vous voyez d'un coup d'œil ce que vous pouvez réellement vendre ou livrer.
 
 ### Fonctionnalités
 
-- 🔄 **Produits libres** — Calcul automatique des produits disponibles à la vente/transport
+- 🔄 **Produits libres** — Calcul automatique des produits disponibles à la vente/transport (après déduction du tampon de production et — si EverythingConstructable est actif — du besoin de chantier ouvert)
 - 📦 **Stock** — Stock actuel et capacité libre par produit
 - 🔎 **Vue de stockage** — Cliquez sur un produit pour voir quel stock en contient combien (entrepôt central, silos, élevages, sorties d'usine, etc.)
 - 🧮 **Types de stockage sélectionnables** — Décidez vous-même ce qui est compté (entrepôt central, silos, extensions de silo, élevages, tas de fumier, silos-couloirs, stockage d'objets, sorties d'usine)
 - 💰 **Meilleurs prix** — Meilleur et maximum prix de vente par produit et par mois
 - 🔵 **Surlignage bleu** — Les produits dont le meilleur mois de vente est en cours sont marqués en **bleu** — c'est le moment le plus rentable pour vendre
 - 🏗️ **Besoin de chantier** — Optionnel, avec [EverythingConstructable](https://farming-simulator.com) : réserve automatiquement le matériel encore nécessaire aux chantiers ouverts sur la quantité libre (en plus du tampon d'usine), pour éviter de vendre par erreur du matériel dont vous avez besoin pour votre chantier. Activable directement en cliquant sur la ligne d'explication de la quantité libre dans le HUD principal ; visible uniquement si le mod est installé
+- 🧱 **Vue des chantiers** — Une vue dédiée (icône de grue) qui liste, par chantier ouvert, le matériel encore manquant ; un clic sur un matériau détaille dans quels stocks il se trouve
+- 🤝 **Vente supplémentaire** — Débloquez vos propres stations de vente pour qu'elles acceptent des **marchandises supplémentaires** qu'elles n'achètent normalement pas (p. ex. matériaux ou diesel au magasin de bricolage). Facteur de prix réglable par produit, regroupé par zone, sauvegardé avec la partie
 - 🏭 **Valeur totale** — Valeur de tous les produits libres par station
 - 🗂️ **Zones** — Regroupez les produits par catégories (ex. Céréales, Liquide, Réfrigération)
 - ✏️ **Gérer les zones** — Créez, renommez et supprimez vos propres zones
@@ -275,6 +289,8 @@ Particularité: Les **produits libres** sont calculés automatiquement — ce qu
 | Faire défiler les listes | Molette de la souris |
 | Bascule CW only | Icône étoile ⭐ dans la barre d'icônes |
 | Activer/désactiver le besoin de chantier | Clic sur la ligne d'explication de la quantité libre dans le HUD principal (visible uniquement avec EverythingConstructable) |
+| Afficher/masquer la vue des chantiers | Clic sur l'icône de grue dans la barre d'icônes |
+| Débloquer la vente supplémentaire | HUD de filtre → onglet « Vente supplémentaire » → clic sur un produit ; facteur de prix avec `[−]` / `[+]` |
 | Intervalle de rafraîchissement | Configurable dans le menu des paramètres |
 
 ### Menu des paramètres
@@ -289,6 +305,8 @@ Un clic sur l'**icône des paramètres** dans la barre d'icônes ouvre le menu d
 > 💡 **Bon à savoir :** Dès que vous triez la liste par **valeur** (clic sur l'icône de tri), le rafraîchissement automatique se met en pause et affiche « En pause ». C'est voulu — sinon les lignes changeraient de place à chaque mise à jour et la liste vous « échapperait ». Revenez sur **A–Z** et le rafraîchissement reprend normalement.
 
 > 🏗️ **Besoin de chantier :** Si [EverythingConstructable](https://farming-simulator.com) est installé, une ligne supplémentaire « Tampon d'usine / chantier » apparaît au-dessus de l'explication de la quantité libre. La phrase en dessous indique automatiquement si le besoin de chantier est actuellement déduit — cliquez dessus pour basculer.
+
+> 🤝 **Vente supplémentaire :** Via l'onglet « Vente supplémentaire » du HUD de filtre, vous débloquez des marchandises supplémentaires pour vos stations de vente qu'elles n'accepteraient pas autrement. Les marchandises sont regroupées par zone ; « d'usine » (déjà accepté) est en haut. Le facteur de prix par produit est réglable, et les déblocages sont conservés dans la sauvegarde.
 
 ### Multijoueur
 
@@ -318,17 +336,19 @@ Compatible multijoueur en principe — chaque joueur a besoin du mod. **Non test
 
 DispoList è un mod HUD per Farming Simulator 25 che ti offre una panoramica rapida delle scorte e dei migliori prezzi di vendita — direttamente nel gioco, senza menu.
 
-Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente — ciò che le tue produzioni generano e non elaborano ulteriormente. Il buffer di produzione è configurabile. Vedi a colpo d'occhio cosa puoi vendere o consegnare.
+Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente — ciò che le tue produzioni generano e non elaborano ulteriormente. Dalla quantità « libera » vengono sottratti il buffer di produzione regolabile e — se [EverythingConstructable](https://farming-simulator.com) è attivo — il fabbisogno dei cantieri ancora aperti. Vedi a colpo d'occhio cosa puoi davvero vendere o consegnare.
 
 ### Funzionalità
 
-- 🔄 **Merci libere** — Calcolo automatico di ciò che è disponibile dalle produzioni per vendita/trasporto
+- 🔄 **Merci libere** — Calcolo automatico di ciò che è disponibile dalle produzioni per vendita/trasporto (dopo aver sottratto il buffer di produzione e — se EverythingConstructable è attivo — il fabbisogno dei cantieri aperti)
 - 📦 **Scorte** — Scorte attuali e capacità libera per prodotto
 - 🔎 **Vista magazzino** — Clicca su un prodotto per vedere in quale deposito e quanto è stoccato (magazzino centrale, sili, allevamenti, uscite di produzione, ecc.)
 - 🧮 **Tipi di deposito selezionabili** — Decidi tu cosa viene conteggiato (magazzino centrale, sili, estensioni sili, allevamenti, cumuli di letame, trincee, deposito oggetti, uscite di produzione)
 - 💰 **Prezzi migliori** — Prezzo di vendita migliore e massimo per prodotto e mese
 - 🔵 **Evidenziazione blu** — Le merci il cui miglior mese di vendita è proprio ora sono in **blu** — è il momento più redditizio per vendere
 - 🏗️ **Fabbisogno cantiere** — Opzionale, con [EverythingConstructable](https://farming-simulator.com): riserva automaticamente il materiale ancora necessario per i cantieri aperti dalla quantità libera (in aggiunta al buffer di fabbrica), per evitare di vendere per errore materiale che ti serve per il tuo cantiere. Attivabile direttamente cliccando sulla riga di spiegazione della quantità libera nell'HUD principale; visibile solo se il mod è installato
+- 🧱 **Vista cantieri** — Una vista dedicata (icona gru) che elenca, per ogni cantiere aperto, il materiale ancora mancante; un clic su un materiale mostra in quali depositi si trova
+- 🤝 **Vendita aggiuntiva** — Sblocca le tue stazioni di vendita affinché accettino **merci aggiuntive** che normalmente non comprerebbero (es. materiali o diesel al negozio di bricolage). Fattore di prezzo regolabile per prodotto, raggruppato per zona, salvato nella partita
 - 🏭 **Valore totale** — Valore di tutte le merci libere per stazione
 - 🗂️ **Zone** — Raggruppa i prodotti in categorie personalizzate
 - ✏️ **Gestione zone** — Crea, rinomina ed elimina le tue zone
@@ -371,6 +391,8 @@ Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente �
 | Scorri le liste | Rotellina del mouse |
 | Attiva/disattiva CW only | Icona stella ⭐ nella barra delle icone |
 | Attiva/disattiva fabbisogno cantiere | Clic sulla riga di spiegazione della quantità libera nell'HUD principale (visibile solo con EverythingConstructable) |
+| Mostra/nascondi vista cantieri | Clic sull'icona gru nella barra delle icone |
+| Sblocca vendita aggiuntiva | HUD filtro → scheda «Vendita aggiuntiva» → clic su un prodotto; fattore di prezzo con `[−]` / `[+]` |
 | Intervallo di aggiornamento | Configurabile nel menu impostazioni |
 
 ### Menu impostazioni
@@ -385,6 +407,8 @@ Un clic sull'**icona impostazioni** nella barra delle icone apre il menu imposta
 > 💡 **Buono a sapersi:** Non appena ordini la lista per **valore** (clic sull'icona di ordinamento), l'aggiornamento automatico si mette in pausa e mostra «In pausa». È voluto — altrimenti le righe cambierebbero posto a ogni aggiornamento e la lista ti «scapperebbe». Torna su **A–Z** e l'aggiornamento riprende normalmente.
 
 > 🏗️ **Fabbisogno cantiere:** Se [EverythingConstructable](https://farming-simulator.com) è installato, sopra la spiegazione della quantità libera appare una riga aggiuntiva «Buffer di fabbrica / cantiere». La frase sottostante mostra automaticamente se il fabbisogno cantiere viene attualmente detratto — clicca per attivare/disattivare.
+
+> 🤝 **Vendita aggiuntiva:** Tramite la scheda «Vendita aggiuntiva» nell'HUD filtro sblocchi merci aggiuntive per le tue stazioni di vendita che altrimenti non accetterebbero. Le merci sono raggruppate per zona; «di fabbrica» (già accettate) sono in cima. Il fattore di prezzo per prodotto è regolabile e gli sblocchi restano salvati nella partita.
 
 ### Multigiocatore
 
@@ -414,17 +438,19 @@ In linea di principio compatibile MP — ogni giocatore ha bisogno del mod. **No
 
 DispoList é um mod HUD para Farming Simulator 25 que fornece uma visão geral rápida dos seus estoques e os melhores preços de venda — diretamente no jogo, sem menus.
 
-Característica especial: Os **produtos livres** são calculados automaticamente — o que as suas produções geram e não processam internamente. O buffer de produção é configurável. Veja de relance o que pode vender ou entregar.
+Característica especial: Os **produtos livres** são calculados automaticamente — o que as suas produções geram e não processam internamente. Da quantidade « livre » são subtraídos o buffer de produção configurável e — se o [EverythingConstructable](https://farming-simulator.com) estiver ativo — a necessidade de obras ainda abertas. Veja de relance o que pode realmente vender ou entregar.
 
 ### Funcionalidades
 
-- 🔄 **Produtos livres** — Cálculo automático do que está disponível das produções para venda/transporte
+- 🔄 **Produtos livres** — Cálculo automático do que está disponível das produções para venda/transporte (após subtrair o buffer de produção e — se o EverythingConstructable estiver ativo — a necessidade de obras abertas)
 - 📦 **Estoque** — Estoque atual e capacidade livre por produto
 - 🔎 **Vista de armazenamento** — Clique num produto para ver em que armazém está e quanto (armazém central, silos, estábulos, saídas de produção, etc.)
 - 🧮 **Tipos de armazenamento selecionáveis** — Decida o que é contado (armazém central, silos, extensões de silo, estábulos, montes de estrume, silos-trincheira, armazém de objetos, saídas de produção)
 - 💰 **Melhores preços** — Melhor e máximo preço de venda por produto e mês
 - 🔵 **Destaque azul** — As mercadorias cujo melhor mês de venda é agora aparecem a **azul** — é quando vale mais a pena vender
 - 🏗️ **Necessidade de obra** — Opcional, com [EverythingConstructable](https://farming-simulator.com): reserva automaticamente o material ainda necessário para obras abertas da quantidade livre (além do buffer de fábrica), para não vender por engano material de que precisa para a sua obra. Alternável diretamente clicando na linha de explicação da quantidade livre no HUD principal; visível apenas se o mod estiver instalado
+- 🧱 **Vista de obras** — Uma vista dedicada (ícone de grua) que lista, por obra aberta, o material ainda em falta; um clique num material mostra em que armazéns ele está
+- 🤝 **Venda adicional** — Desbloqueie as suas estações de venda para aceitarem **produtos adicionais** que normalmente não comprariam (ex. materiais ou diesel na loja de bricolagem). Fator de preço ajustável por produto, agrupado por zona, guardado no savegame
 - 🏭 **Valor total** — Valor de todos os produtos livres por estação
 - 🗂️ **Zonas** — Agrupe produtos em categorias personalizadas
 - ✏️ **Gerir zonas** — Crie, renomeie e elimine as suas próprias zonas
@@ -467,6 +493,8 @@ Característica especial: Os **produtos livres** são calculados automaticamente
 | Percorrer as listas | Roda do rato |
 | Alternar CW only | Ícone de estrela ⭐ na barra de ícones |
 | Alternar necessidade de obra | Clique na linha de explicação da quantidade livre no HUD principal (visível apenas com EverythingConstructable) |
+| Mostrar/ocultar vista de obras | Clique no ícone de grua na barra de ícones |
+| Desbloquear venda adicional | HUD de filtro → separador «Venda adicional» → clique num produto; fator de preço com `[−]` / `[+]` |
 | Intervalo de atualização | Configurável no menu de definições |
 
 ### Menu de definições
@@ -481,6 +509,8 @@ Um clique no **ícone de definições** na barra de ícones abre o menu de defin
 > 💡 **Bom saber:** Assim que ordenar a lista por **valor** (clique no ícone de ordenação), a atualização automática pausa e mostra «Pausado». É intencional — caso contrário, as linhas trocariam de lugar a cada atualização e a lista «fugiria». Volte para **A–Z** e a atualização continua normalmente.
 
 > 🏗️ **Necessidade de obra:** Se o [EverythingConstructable](https://farming-simulator.com) estiver instalado, aparece uma linha extra «Buffer de fábrica / obra» acima da explicação da quantidade livre. A frase abaixo mostra automaticamente se a necessidade de obra está atualmente a ser deduzida — clique para alternar.
+
+> 🤝 **Venda adicional:** Através do separador «Venda adicional» no HUD de filtro desbloqueia produtos adicionais para as suas estações de venda que de outra forma não aceitariam. Os produtos estão agrupados por zona; «de fábrica» (já aceites) aparecem no topo. O fator de preço por produto é ajustável e os desbloqueios ficam guardados no savegame.
 
 ### Multijogador
 
@@ -510,17 +540,19 @@ Em princípio compatível com MP — cada jogador precisa do mod. **Não testado
 
 DispoList es un mod HUD para Farming Simulator 25 que te ofrece una vista rápida de tus existencias y los mejores precios de venta — directamente en el juego, sin menús.
 
-Característica especial: Los **productos libres** se calculan automáticamente — lo que tus producciones generan y no procesan internamente. El búfer de producción es configurable. Ves de un vistazo qué puedes vender o entregar.
+Característica especial: Los **productos libres** se calculan automáticamente — lo que tus producciones generan y no procesan internamente. De la cantidad « libre » se restan el búfer de producción configurable y — si [EverythingConstructable](https://farming-simulator.com) está activo — la necesidad de obras aún abiertas. Ves de un vistazo qué puedes vender o entregar realmente.
 
 ### Funcionalidades
 
-- 🔄 **Productos libres** — Cálculo automático de lo disponible de producciones para venta/transporte
+- 🔄 **Productos libres** — Cálculo automático de lo disponible de producciones para venta/transporte (tras restar el búfer de producción y — si EverythingConstructable está activo — la necesidad de obras abiertas)
 - 📦 **Existencias** — Existencias actuales y capacidad libre por producto
 - 🔎 **Vista de almacén** — Haz clic en un producto para ver en qué almacén hay cuánto (almacén central, silos, establos, salidas de producción, etc.)
 - 🧮 **Tipos de almacén seleccionables** — Decide qué se cuenta (almacén central, silos, extensiones de silo, establos, montones de estiércol, silos zanja, almacén de objetos, salidas de producción)
 - 💰 **Mejores precios** — Mejor y máximo precio de venta por producto y mes
 - 🔵 **Resaltado azul** — Las mercancías cuyo mejor mes de venta es ahora mismo se marcan en **azul** — es cuando más conviene vender
 - 🏗️ **Necesidad de obra** — Opcional, con [EverythingConstructable](https://farming-simulator.com): reserva automáticamente el material que aún se necesita para obras abiertas de la cantidad libre (además del búfer de fábrica), para no vender por error material que necesitas para tu propia obra. Se activa directamente haciendo clic en la línea de explicación de la cantidad libre en el HUD principal; solo visible si el mod está instalado
+- 🧱 **Vista de obras** — Una vista dedicada (icono de grúa) que lista, por obra abierta, el material que aún falta; al hacer clic en un material se despliega en qué almacenes se encuentra
+- 🤝 **Venta adicional** — Desbloquea tus estaciones de venta para que acepten **mercancías adicionales** que normalmente no comprarían (p. ej. materiales o diésel en la tienda de bricolaje). Factor de precio ajustable por producto, agrupado por zonas, guardado en la partida
 - 🏭 **Valor total** — Valor de todos los productos libres por estación
 - 🗂️ **Zonas** — Agrupa productos en categorías personalizadas
 - ✏️ **Gestionar zonas** — Crea, renombra y elimina tus propias zonas
@@ -563,6 +595,8 @@ Característica especial: Los **productos libres** se calculan automáticamente 
 | Desplazar las listas | Rueda del ratón |
 | Alternar CW only | Icono de estrella ⭐ en la barra de iconos |
 | Alternar necesidad de obra | Clic en la línea de explicación de la cantidad libre en el HUD principal (visible solo con EverythingConstructable) |
+| Mostrar/ocultar vista de obras | Clic en el icono de grúa en la barra de iconos |
+| Desbloquear venta adicional | HUD de filtro → pestaña «Venta adicional» → clic en un producto; factor de precio con `[−]` / `[+]` |
 | Intervalo de actualización | Configurable en el menú de ajustes |
 
 ### Menú de ajustes
@@ -578,6 +612,8 @@ Un clic en el **icono de ajustes** en la barra de iconos abre el menú de ajuste
 
 > 🏗️ **Necesidad de obra:** Si [EverythingConstructable](https://farming-simulator.com) está instalado, aparece una línea adicional «Búfer de fábrica / obra» encima de la explicación de la cantidad libre. La frase debajo muestra automáticamente si la necesidad de obra se está deduciendo actualmente — haz clic para alternar.
 
+> 🤝 **Venta adicional:** A través de la pestaña «Venta adicional» en el HUD de filtro desbloqueas mercancías adicionales para tus estaciones de venta que de otro modo no aceptarían. Las mercancías se agrupan por zonas; «de fábrica» (ya aceptadas) aparecen arriba. El factor de precio por producto es ajustable y los desbloqueos se guardan en la partida.
+
 ### Multijugador
 
 En principio compatible con MP — cada jugador necesita el mod. **No probado oficialmente**, úsalo bajo tu propia responsabilidad.
@@ -591,7 +627,6 @@ En principio compatible con MP — cada jugador necesita el mod. **No probado of
 ---
 
 *Built with ❤️ for the FS25 community*
-
 
 ## Changelog
 
