@@ -54,6 +54,7 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 ### Voraussetzungen
 
 - Farming Simulator 25
+- Kein separater Download nötig: Das **HL HUD System** (von HappyLooser) ist bereits im Mod enthalten. Blendest du das HL-Mini-HUD ein, lässt sich DispoList auch per Klick auf sein Icon dort öffnen
 - Optional: [EverythingConstructable](https://farming-simulator.com) für die Baustellen-Bedarf-Funktion (Mod läuft auch ohne, die Funktion bleibt dann einfach ausgeblendet)
 
 ### Installation
@@ -69,6 +70,7 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 | Aktion | Taste / Maus |
 |---|---|
 | DispoList ein/aus | `Shift + C` (anpassbar) |
+| DispoList ein/aus (Mini-HUD) | Klick auf das DispoList-Icon im HL-Mini-HUD (falls eingeblendet) |
 | Maussteuerung | `F9 / F12` (HL HUD System) |
 | Einstellungsmenü öffnen | Klick auf das Einstellungen-Icon in der Icon-Leiste |
 | Spalten ein/aus | Einstellungsmenü → „Spalten anzeigen" |
@@ -160,6 +162,7 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 ### Requirements
 
 - Farming Simulator 25
+- No separate download needed: the **HL HUD System** (by HappyLooser) is bundled with the mod. If you show the HL mini-HUD, you can also open DispoList by clicking its icon there
 - Optional: [EverythingConstructable](https://farming-simulator.com) for the construction site demand feature (the mod works fine without it, the feature simply stays hidden)
 
 ### Installation
@@ -175,6 +178,7 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 | Action | Key / Mouse |
 |---|---|
 | Toggle DispoList | `Shift + C` (configurable) |
+| Toggle DispoList (mini-HUD) | Click the DispoList icon in the HL mini-HUD (if shown) |
 | Mouse control | `F9 / F12` (HL HUD System) |
 | Open settings menu | Click the settings icon in the icon bar |
 | Toggle columns | Settings menu → "Show columns" |
@@ -262,6 +266,7 @@ Particularité: Les **produits libres** sont calculés automatiquement — ce qu
 ### Prérequis
 
 - Farming Simulator 25
+- Aucun téléchargement séparé nécessaire : le **HL HUD System** (de HappyLooser) est inclus dans le mod. Si vous affichez le mini-HUD HL, vous pouvez aussi ouvrir la DispoList en cliquant sur son icône
 - Optionnel : [EverythingConstructable](https://farming-simulator.com) pour la fonctionnalité de besoin de chantier (le mod fonctionne aussi sans, la fonctionnalité reste simplement masquée)
 
 ### Installation
@@ -277,6 +282,7 @@ Particularité: Les **produits libres** sont calculés automatiquement — ce qu
 | Action | Touche / Souris |
 |---|---|
 | Afficher/masquer la DispoList | `Shift + C` (configurable) |
+| Afficher/masquer la DispoList (mini-HUD) | Clic sur l'icône DispoList dans le mini-HUD HL (si affiché) |
 | Contrôle à la souris | `F9 / F12` (HL HUD System) |
 | Ouvrir le menu des paramètres | Clic sur l'icône des paramètres dans la barre d'icônes |
 | Afficher/masquer les colonnes | Menu des paramètres → « Afficher les colonnes » |
@@ -364,6 +370,7 @@ Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente �
 ### Requisiti
 
 - Farming Simulator 25
+- Nessun download separato necessario: l'**HL HUD System** (di HappyLooser) è incluso nel mod. Se mostri il mini-HUD HL, puoi anche aprire la DispoList cliccando sulla sua icona
 - Opzionale: [EverythingConstructable](https://farming-simulator.com) per la funzione fabbisogno cantiere (il mod funziona anche senza, la funzione resta semplicemente nascosta)
 
 ### Installazione
@@ -379,6 +386,7 @@ Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente �
 | Azione | Tasto / Mouse |
 |---|---|
 | Mostra/nascondi DispoList | `Shift + C` (configurabile) |
+| Mostra/nascondi DispoList (mini-HUD) | Clic sull'icona DispoList nel mini-HUD HL (se visibile) |
 | Controllo con il mouse | `F9 / F12` (HL HUD System) |
 | Apri il menu impostazioni | Clic sull'icona impostazioni nella barra delle icone |
 | Mostra/nascondi colonne | Menu impostazioni → «Mostra colonne» |
@@ -466,6 +474,7 @@ Característica especial: Os **produtos livres** são calculados automaticamente
 ### Requisitos
 
 - Farming Simulator 25
+- Sem download separado: o **HL HUD System** (do HappyLooser) está incluído no mod. Se mostrar o mini-HUD HL, também pode abrir a DispoList clicando no seu ícone
 - Opcional: [EverythingConstructable](https://farming-simulator.com) para a funcionalidade de necessidade de obra (o mod funciona também sem, a funcionalidade fica simplesmente oculta)
 
 ### Instalação
@@ -481,6 +490,7 @@ Característica especial: Os **produtos livres** são calculados automaticamente
 | Ação | Tecla / Rato |
 |---|---|
 | Mostrar/ocultar DispoList | `Shift + C` (configurável) |
+| Mostrar/ocultar DispoList (mini-HUD) | Clique no ícone DispoList no mini-HUD HL (se visível) |
 | Controlo com o rato | `F9 / F12` (HL HUD System) |
 | Abrir o menu de definições | Clique no ícone de definições na barra de ícones |
 | Mostrar/ocultar colunas | Menu de definições → «Mostrar colunas» |
@@ -568,6 +578,7 @@ Característica especial: Los **productos libres** se calculan automáticamente 
 ### Requisitos
 
 - Farming Simulator 25
+- Sin descarga aparte: el **HL HUD System** (de HappyLooser) está incluido en el mod. Si muestras el mini-HUD HL, también puedes abrir la DispoList haciendo clic en su icono
 - Opcional: [EverythingConstructable](https://farming-simulator.com) para la función de necesidad de obra (el mod funciona también sin él, la función simplemente queda oculta)
 
 ### Instalación
@@ -583,6 +594,7 @@ Característica especial: Los **productos libres** se calculan automáticamente 
 | Acción | Tecla / Ratón |
 |---|---|
 | Mostrar/ocultar DispoList | `Shift + C` (configurable) |
+| Mostrar/ocultar DispoList (mini-HUD) | Clic en el icono DispoList en el mini-HUD HL (si se muestra) |
 | Control con el ratón | `F9 / F12` (HL HUD System) |
 | Abrir el menú de ajustes | Clic en el icono de ajustes en la barra de iconos |
 | Mostrar/ocultar columnas | Menú de ajustes → «Mostrar columnas» |
