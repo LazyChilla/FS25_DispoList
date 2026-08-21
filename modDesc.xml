@@ -18,9 +18,9 @@ Controls:
 Shift+C: show/hide the DispoList window
 F9: toggle mouse cursor (HL HUD System) — needed to click buttons, drag or resize the window
 
-MP: Each player needs the mod installed. Not tested in multiplayer — use at your own risk.
+MP: Each player needs the mod installed. The extra-offtake feature changes and syncs savegame data (this is no longer a pure display mod) and has not yet been tested with two players in co-op — multiplayer use at your own risk. Feedback from co-op tests is very welcome.
 
-Changelog (1.3.0.0): New "Extra offtake" tab - unlock your own selling stations to also accept additional goods (grouped by zone, with an adjustable price factor); the deals are saved with your savegame. New construction-site view showing the open material demand per site, with per-material storage drill-down. Reworked search: driving is blocked while typing, Enter or a click elsewhere confirms and frees the controls again. New HUD icon. Multiplayer sync for the extra-offtake deals is implemented but not yet fully tested in co-op.
+Changelog (1.4.0.0): New "Cash-box shops" view (money-box icon): see at a glance which of your own cash sell points (farm shop, ice-cream parlor, fish stall, ...) need supplies — for each good you see how much still fits (to deliver) and how much you have free; empty inputs are sorted to the top and highlighted. Only active recipes and only goods you can actually deliver are listed. Extra offtake extended: you can now also unlock factory/pallet goods (e.g. silage additive). More accurate best-buyer display: sell points with limited storage (e.g. construction sites) are now handled correctly — the displayed "free" amount follows the station's remaining capacity, and such points are marked orange. New "accepted/total" counter in the Stations tab. Extra darker transparency stage for the window. Crash/stability fix and polish.
 
 Credits: HappyLooser (HL HUD System), FedAction (NF Marsch map & inspiration). Titel-HUD icon: "Filter Menu Outline" from Material Design Icons by the Pictogrammers Team (https://pictogrammers.com), licensed under Apache 2.0.
 
@@ -35,9 +35,9 @@ Bedienung:
 Shift+C: DispoList-Fenster ein-/ausblenden
 F9: Maus-Cursor umschalten (HL HUD System) — nötig zum Klicken von Buttons, Ziehen oder Größenänderung des Fensters
 
-MP: Jeder Spieler benötigt den Mod. Nicht im Multiplayer getestet — auf eigene Gefahr.
+MP: Jeder Spieler benötigt den Mod. Die Zusatzabnahme verändert und synchronisiert Spielstand-Daten (kein reiner Anzeige-Mod mehr) und ist im Coop noch nicht mit zwei Spielern getestet — Multiplayer-Nutzung auf eigene Gefahr. Über Rückmeldungen aus dem Coop freue ich mich sehr.
 
-Changelog (1.3.0.0): Neuer Reiter "Zusatzabnahme" - eigene Verkaufsstationen fuer zusaetzliche Waren freischalten (nach Bereich gruppiert, mit einstellbarem Preisfaktor); die Freischaltungen werden im Savegame gespeichert. Neue Baustellen-Ansicht mit offenem Materialbedarf je Baustelle, Lager pro Material aufklappbar. Ueberarbeitete Suche: Fahren wird beim Tippen gesperrt, Enter oder ein Klick woanders bestaetigt und gibt die Steuerung wieder frei. Neues HUD-Icon. Der Mehrspieler-Abgleich der Zusatzabnahme ist implementiert, im Coop aber noch nicht final getestet.
+Changelog (1.4.0.0): Neue Ansicht "Geldkassetten-Shops" (Geldkassette-Icon): zeigt auf einen Blick, welche deiner eigenen Bargeld-Verkaufsstellen (Hofladen, Eisdiele, Fischbude ...) Nachschub brauchen — je Ware siehst du, wieviel noch reinpasst (zu liefern) und wieviel du davon frei hast; leere Eingaenge werden oben einsortiert und farblich hervorgehoben. Gelistet werden nur aktive Rezepte und nur wirklich lieferbare Waren. Zusatzabnahme erweitert: jetzt lassen sich auch ab-Werk-/Paletten-Waren freischalten (z.B. Siliermittel). Genauere Bestbieter-Anzeige: Verkaufsstellen mit begrenztem Lager (z.B. Baustellen/Konstruktionen) werden jetzt korrekt behandelt — die angezeigte "freie" Menge richtet sich nach der noch freien Kapazitaet der Station, und solche Stellen sind orange markiert. Neuer "akzeptiert/gesamt"-Zaehler im Stationen-Reiter. Zusaetzliche dunklere Transparenzstufe fuer das Fenster. Absturz-/Stabilitaetsfix und Feinschliff.
 
 Credits: HappyLooser (HL HUD System), FedAction (NF Marsch Karte & Inspiration). Titel-HUD-Icon: "Filter Menu Outline" aus Material Design Icons vom Pictogrammers Team (https://pictogrammers.com), lizenziert unter Apache 2.0.
 
@@ -52,11 +52,11 @@ Commandes:
 Maj+C: afficher/masquer la fenêtre DispoList
 F9: basculer le curseur de la souris (HL HUD System) — nécessaire pour cliquer sur les boutons, déplacer ou redimensionner la fenêtre
 
-MP: Chaque joueur a besoin du mod. Non testé en multijoueur — à utiliser à vos risques.
+MP: Chaque joueur a besoin du mod. La vente supplémentaire modifie et synchronise des données de sauvegarde (ce n'est plus un simple mod d'affichage) et n'a pas encore été testée à deux en coop — utilisation en multijoueur à vos risques. Vos retours sur des tests en coop sont les bienvenus.
 
 Crédits: HappyLooser (HL HUD System), FedAction (carte NF Marsch & inspiration). Icône Titel-HUD : « Filter Menu Outline » de Material Design Icons par l'équipe Pictogrammers (https://pictogrammers.com), sous licence Apache 2.0.
 
-Changelog (1.3.0.0): Nouvel onglet « Vente supplémentaire » - débloquez vos propres stations de vente pour accepter aussi des marchandises supplémentaires (regroupées par zone, avec un facteur de prix ajustable) ; les déblocages sont sauvegardés avec la partie. Nouvelle vue des chantiers montrant le besoin en matériaux par chantier, avec détail du stockage par matériau. Recherche retravaillée : la conduite est bloquée pendant la saisie, Entrée ou un clic ailleurs valide et libère les commandes. Nouvelle icône HUD. La synchronisation multijoueur de la vente supplémentaire est implémentée mais pas encore entièrement testée en coop.
+Changelog (1.4.0.0): Nouvelle vue "Boutiques a cassettes" (icone coffre): voyez d'un coup d'oeil lesquels de vos points de vente en especes (magasin de ferme, glacier, stand de poisson, ...) ont besoin d'approvisionnement — pour chaque marchandise vous voyez combien il reste a livrer et combien vous en avez de libre ; les entrees vides sont placees en haut et mises en evidence. Seules les recettes actives et les marchandises reellement livrables sont listees. Vente supplementaire etendue: vous pouvez desormais aussi debloquer des marchandises d'usine/palette (p. ex. agent d'ensilage). Affichage du meilleur acheteur plus precis : les points de vente a stockage limite (p. ex. chantiers) sont desormais traites correctement — la quantite "libre" affichee suit la capacite restante de la station, et ces points sont marques en orange. Nouveau compteur "accepte/total" dans l'onglet Stations. Niveau de transparence plus sombre supplementaire pour la fenetre. Correction de plantage/stabilite et finitions.
 
 SUPPORT: Merci de signaler les bugs et les demandes uniquement via GitHub, toujours avec log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Sans log.txt personne ne peut aider. Pas de support via les commentaires sur les pages de telechargement.
 ]]></fr>
@@ -69,11 +69,11 @@ Comandi:
 Maiusc+C: mostra/nasconde la finestra DispoList
 F9: attiva/disattiva il cursore del mouse (HL HUD System) — necessario per cliccare i pulsanti, trascinare o ridimensionare la finestra
 
-MP: Ogni giocatore ha bisogno del mod. Non testato in multiplayer — usare a proprio rischio.
+MP: Ogni giocatore ha bisogno del mod. La vendita aggiuntiva modifica e sincronizza dati del salvataggio (non è più un semplice mod di visualizzazione) e non è ancora stata testata in due in co-op — uso in multiplayer a proprio rischio. I feedback dai test in co-op sono molto graditi.
 
 Crediti: HappyLooser (HL HUD System), FedAction (mappa NF Marsch & ispirazione). Icona Titel-HUD: "Filter Menu Outline" da Material Design Icons del team Pictogrammers (https://pictogrammers.com), sotto licenza Apache 2.0.
 
-Changelog (1.3.0.0): Nuova scheda "Vendita aggiuntiva" - sblocca le tue stazioni di vendita per accettare anche merci aggiuntive (raggruppate per zona, con un fattore di prezzo regolabile); gli sblocchi vengono salvati con la partita. Nuova vista dei cantieri con il fabbisogno di materiali per cantiere, con dettaglio del deposito per materiale. Ricerca rielaborata: la guida e bloccata durante la digitazione, Invio o un clic altrove conferma e libera di nuovo i comandi. Nuova icona HUD. La sincronizzazione multiplayer della vendita aggiuntiva e implementata ma non ancora testata a fondo in co-op.
+Changelog (1.4.0.0): Nuova vista "Negozi a cassetta" (icona cassetta): scopri a colpo d'occhio quali dei tuoi punti vendita in contanti (spaccio agricolo, gelateria, chiosco del pesce, ...) hanno bisogno di rifornimenti — per ogni merce vedi quanto ci sta ancora (da consegnare) e quanto ne hai libero; gli ingressi vuoti sono in cima ed evidenziati. Vengono elencate solo le ricette attive e solo le merci realmente consegnabili. Vendita aggiuntiva ampliata: ora puoi sbloccare anche merci di fabbrica/pallet (es. additivo per insilato). Visualizzazione del miglior acquirente piu precisa: i punti vendita con deposito limitato (es. cantieri) ora vengono gestiti correttamente — la quantita "libera" mostrata segue la capacita residua della stazione, e tali punti sono contrassegnati in arancione. Nuovo contatore "accettato/totale" nella scheda Stazioni. Livello di trasparenza piu scuro aggiuntivo per la finestra. Correzione di crash/stabilita e rifiniture.
 
 SUPPORT: Segnala bug e richieste solo tramite GitHub, sempre con log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Senza log.txt nessuno puo aiutare. Nessun supporto tramite commenti sulle pagine di download.
 ]]></it>
@@ -86,11 +86,11 @@ Controles:
 Shift+C: mostrar/ocultar a janela do DispoList
 F9: alternar o cursor do mouse (HL HUD System) — necessário para clicar em botões, arrastar ou redimensionar a janela
 
-MP: Cada jogador precisa do mod. Não testado em multijogador — use por sua conta e risco.
+MP: Cada jogador precisa do mod. A venda adicional altera e sincroniza dados do savegame (já não é um mod só de exibição) e ainda não foi testada com dois jogadores em co-op — uso em multijogador por sua conta e risco. Feedback de testes em co-op é muito bem-vindo.
 
 Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch & inspiração). Ícone Titel-HUD: "Filter Menu Outline" de Material Design Icons pela equipe Pictogrammers (https://pictogrammers.com), licenciado sob Apache 2.0.
 
-Changelog (1.3.0.0): Nova aba "Venda adicional" - desbloqueie as suas proprias estacoes de venda para aceitar tambem produtos adicionais (agrupados por zona, com um fator de preco ajustavel); os desbloqueios sao salvos no savegame. Nova vista de obras mostrando a necessidade de material por obra, com detalhe de armazenamento por material. Busca reformulada: dirigir fica bloqueado durante a digitacao, Enter ou um clique em outro lugar confirma e libera os controles novamente. Novo icone de HUD. A sincronizacao multijogador da venda adicional esta implementada mas ainda nao foi totalmente testada em co-op.
+Changelog (1.4.0.0): Nova vista "Lojas de caixa" (icone de cofre): veja num relance quais dos seus pontos de venda em dinheiro (loja da fazenda, gelataria, banca de peixe, ...) precisam de abastecimento — para cada produto ve quanto ainda cabe (a entregar) e quanto tem livre; entradas vazias ficam no topo e destacadas. Apenas receitas ativas e apenas produtos realmente entregaveis sao listados. Venda adicional ampliada: agora tambem pode desbloquear produtos de fabrica/palete (p. ex. aditivo de silagem). Exibicao do melhor comprador mais precisa: pontos de venda com armazenamento limitado (p. ex. obras) agora sao tratados corretamente — a quantidade "livre" exibida segue a capacidade restante da estacao, e esses pontos sao marcados em laranja. Novo contador "aceito/total" na aba Estacoes. Nivel de transparencia mais escuro adicional para a janela. Correcao de travamento/estabilidade e ajustes.
 
 SUPPORT: Reporte erros e pedidos apenas via GitHub, sempre com log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Sem log.txt ninguem pode ajudar. Sem suporte via comentarios nas paginas de download.
 ]]></pt>
@@ -103,23 +103,25 @@ Controles:
 Mayús+C: mostrar/ocultar la ventana de DispoList
 F9: alternar el cursor del ratón (HL HUD System) — necesario para hacer clic en botones, arrastrar o redimensionar la ventana
 
-MP: Cada jugador necesita el mod. No probado en multijugador — úselo bajo su propio riesgo.
+MP: Cada jugador necesita el mod. La venta adicional modifica y sincroniza datos de la partida (ya no es un mod solo de visualización) y aún no se ha probado con dos jugadores en cooperativo — uso en multijugador bajo su propio riesgo. Se agradecen mucho los comentarios de pruebas en cooperativo.
 
 Créditos: HappyLooser (HL HUD System), FedAction (mapa NF Marsch & inspiración). Icono Titel-HUD: "Filter Menu Outline" de Material Design Icons por el equipo Pictogrammers (https://pictogrammers.com), bajo licencia Apache 2.0.
 
-Changelog (1.3.0.0): Nueva pestana "Venta adicional" - desbloquea tus propias estaciones de venta para aceptar tambien mercancias adicionales (agrupadas por zona, con un factor de precio ajustable); los desbloqueos se guardan con la partida. Nueva vista de obras que muestra la necesidad de material por obra, con detalle de almacen por material. Busqueda rediseñada: conducir queda bloqueado mientras escribes, Enter o un clic en otro lugar confirma y libera de nuevo los controles. Nuevo icono de HUD. La sincronizacion multijugador de la venta adicional esta implementada pero aun no se ha probado del todo en cooperativo.
+Changelog (1.4.0.0): Nueva vista "Tiendas de caja" (icono de caja fuerte): ve de un vistazo cuales de tus puntos de venta en efectivo (tienda de granja, heladeria, puesto de pescado, ...) necesitan suministro — para cada mercancia ves cuanto cabe aun (a entregar) y cuanto tienes libre; las entradas vacias se colocan arriba y se resaltan. Solo se listan las recetas activas y solo las mercancias que realmente puedes entregar. Venta adicional ampliada: ahora tambien puedes desbloquear mercancias de fabrica/pale (p. ej. aditivo de ensilado). Visualizacion del mejor comprador mas precisa: los puntos de venta con almacen limitado (p. ej. obras) ahora se tratan correctamente — la cantidad "libre" mostrada sigue la capacidad restante de la estacion, y esos puntos se marcan en naranja. Nuevo contador "aceptado/total" en la pestana Estaciones. Nivel de transparencia mas oscuro adicional para la ventana. Correccion de cierre/estabilidad y retoques.
 
 SUPPORT: Informa de errores y peticiones solo a traves de GitHub, siempre con log.txt: https://github.com/LazyChilla/FS25_DispoList/issues  Sin log.txt nadie puede ayudar. Sin soporte a traves de comentarios en las paginas de descarga.
 ]]></es>
     </description>
     <author>LazyChilla</author>
-    <version>1.3.0.0</version>
+    <version>1.4.0.0</version>
     <iconFilename>icon_dispoList.dds</iconFilename>
     <multiplayer supported="false"/>
 
     <extraSourceFiles>
         <sourceFile filename="hlUtils/_hlUtils.lua"/>
         <sourceFile filename="hlHudSystem/hlHudSystem.lua"/>
+        <!-- Lokalisierung zuerst: DL_t() muss vor allen DL-Dateien existieren -->
+        <sourceFile filename="scripte_dl/DL_L10N.lua"/>
         <sourceFile filename="scripte_dl/xml/DL_Display_XmlBox.lua"/>
         <sourceFile filename="scripte_dl/draw/DL_Display_DrawBox.lua"/>
         <!-- MP-Event-Klassen: MUESSEN zur Compile-Zeit registriert werden

@@ -28,6 +28,7 @@ Besonderheit: Die **freien Waren** werden automatisch errechnet — also was dei
 
 ### Features
 
+- 💰 **Geldkassetten-Shops** — zeigt für deine Bargeld-Verkaufsstellen (Hofladen, Eisdiele, Fischbude …) auf einen Blick, was du liefern musst und was du frei hast.
 - 🔄 **Freie Waren** — Automatische Berechnung was aus Produktionen zum Verkauf/Transport verfügbar ist (abzüglich Produktionspuffer und — falls EverythingConstructable läuft — dem offenen Baustellen-Bedarf)
 - 📦 **Lagerbestand** — Aktueller Bestand und freie Kapazität pro Ware
 - 🔎 **Lageransicht** — Klick auf eine Ware zeigt, in welchem Lager wie viel liegt (Zentrallager, Silos, Tierhaltung, Fabrik-Ausgänge u.v.m.)
@@ -136,6 +137,7 @@ Special feature: **Free goods** are calculated automatically — meaning what yo
 
 ### Features
 
+- 💰 **Cash-box shops** — shows at a glance, for your cash sell points (farm shop, ice-cream parlor, fish stall …), what to deliver and what you have free.
 - 🔄 **Free goods** — Automatic calculation of what is available from productions for sale/transport (after subtracting the production buffer and — if EverythingConstructable is running — the open construction-site demand)
 - 📦 **Stock** — Current stock and free capacity per product
 - 🔎 **Storage view** — Click a product to see which storage holds how much (central warehouse, silos, animal pens, factory outputs and more)
@@ -244,6 +246,7 @@ Particularité: Les **produits libres** sont calculés automatiquement — ce qu
 
 ### Fonctionnalités
 
+- 💰 **Boutiques à cassettes** — montre d'un coup d'œil, pour vos points de vente en espèces, ce qu'il faut livrer et ce dont vous disposez.
 - 🔄 **Produits libres** — Calcul automatique des produits disponibles à la vente/transport (après déduction du tampon de production et — si EverythingConstructable est actif — du besoin de chantier ouvert)
 - 📦 **Stock** — Stock actuel et capacité libre par produit
 - 🔎 **Vue de stockage** — Cliquez sur un produit pour voir quel stock en contient combien (entrepôt central, silos, élevages, sorties d'usine, etc.)
@@ -348,6 +351,7 @@ Caratteristica speciale: Le **merci libere** vengono calcolate automaticamente �
 
 ### Funzionalità
 
+- 💰 **Negozi a cassetta** — mostra a colpo d'occhio, per i tuoi punti vendita in contanti, cosa consegnare e cosa hai libero.
 - 🔄 **Merci libere** — Calcolo automatico di ciò che è disponibile dalle produzioni per vendita/trasporto (dopo aver sottratto il buffer di produzione e — se EverythingConstructable è attivo — il fabbisogno dei cantieri aperti)
 - 📦 **Scorte** — Scorte attuali e capacità libera per prodotto
 - 🔎 **Vista magazzino** — Clicca su un prodotto per vedere in quale deposito e quanto è stoccato (magazzino centrale, sili, allevamenti, uscite di produzione, ecc.)
@@ -452,6 +456,7 @@ Característica especial: Os **produtos livres** são calculados automaticamente
 
 ### Funcionalidades
 
+- 💰 **Lojas de caixa** — mostra num relance, para os seus pontos de venda em dinheiro, o que entregar e o que tem livre.
 - 🔄 **Produtos livres** — Cálculo automático do que está disponível das produções para venda/transporte (após subtrair o buffer de produção e — se o EverythingConstructable estiver ativo — a necessidade de obras abertas)
 - 📦 **Estoque** — Estoque atual e capacidade livre por produto
 - 🔎 **Vista de armazenamento** — Clique num produto para ver em que armazém está e quanto (armazém central, silos, estábulos, saídas de produção, etc.)
@@ -556,6 +561,7 @@ Característica especial: Los **productos libres** se calculan automáticamente 
 
 ### Funcionalidades
 
+- 💰 **Tiendas de caja** — muestra de un vistazo, para tus puntos de venta en efectivo, qué entregar y qué tienes libre.
 - 🔄 **Productos libres** — Cálculo automático de lo disponible de producciones para venta/transporte (tras restar el búfer de producción y — si EverythingConstructable está activo — la necesidad de obras abiertas)
 - 📦 **Existencias** — Existencias actuales y capacidad libre por producto
 - 🔎 **Vista de almacén** — Haz clic en un producto para ver en qué almacén hay cuánto (almacén central, silos, establos, salidas de producción, etc.)

@@ -7,6 +7,40 @@
 DispoList = {}
 DispoList.Debug = false
 DispoList.isInit = false
+
+-- ─── Farb-Theme (Single Source of Truth) ────────────────────────────────────
+-- Geteilte, semantisch EINDEUTIGE Icon-Farben: einmal definiert (statt 16x das
+-- gleiche Grau reingetippt) und einmal alloziert (statt pro Frame im Draw neu).
+-- BEWUSST nur die geteilten Icon-Zustandsfarben. Spalten-/Marker-/Zustandsfarben
+-- bleiben lokal: gleiche RGB heisst NICHT gleiche Bedeutung (z.B. Gruen fuer
+-- "genug Bestand" ist NICHT dasselbe Konzept wie "Filter aktiv") -> kein
+-- Falsch-DRY, das voneinander unabhaengige Dinge aneinanderkoppelt.
+DL_Colors = {
+    iconIdle        = {0.65, 0.65, 0.65, 1.0},  -- Icon inaktiv (Standard-Grau)
+    iconHover       = {0.95, 0.95, 0.95, 1.0},  -- Icon unter dem Mauszeiger
+    iconActive      = {0.2,  0.8,  1.0,  1.0},  -- Toggle aktiv (blau: Sortierung/Suche/Settings)
+    iconActiveGreen = {0.1,  1.0,  0.1,  1.0},  -- Toggle aktiv (gruen: Filter/ZL/Baumaterial)
+    -- Draw-Loop-Hintergruende (pro Frame gezeichnet -> als Konstante, nicht neu allozieren)
+    panelBg         = {0.03, 0.03, 0.03, 0.95}, -- Icon-Zeilen-Hintergrund (fast schwarz)
+    rowSel          = {0.08, 0.30, 0.08, 0.95}, -- ausgewaehlte Listenzeile (gruen)
+    rowBg           = {0.04, 0.08, 0.04, 0.70}, -- normale Listenzeile (dunkel)
+    -- Textfarben (wiederkehrend, via setTextColor(unpack(...)) genutzt). Werte 1:1
+    -- erhalten -- benennen, nicht plaetten: die Grau-Abstufung ist Absicht (Hierarchie).
+    white           = {1.0,  1.0,  1.0,  1.0},  -- Standardtext / Reset
+    gruen           = {0.1,  1.0,  0.1,  1.0},  -- positiv: genug Bestand / aktiv / Marker
+    gruenHead       = {0.0,  1.0,  0.2,  1.0},  -- Ueberschriften/Labels im Filter-Panel
+    rot             = {1.0,  0.1,  0.1,  1.0},  -- EIN Rot (Fehler / aus / loeschen / Wert=0)
+    grauHell        = {0.75, 0.75, 0.75, 1.0},  -- Text hell
+    grau            = {0.7,  0.7,  0.7,  1.0},  -- Text normal (gedaempft)
+    grau65          = {0.65, 0.65, 0.65, 1.0},  -- Text neutral
+    grauMit         = {0.5,  0.5,  0.5,  1.0},  -- Text sekundaer / Hinweis
+    grauDim         = {0.45, 0.45, 0.45, 1.0},  -- Text sehr gedaempft (Version/Fussnote)
+    trenner         = {0.35, 0.35, 0.35, 1.0},  -- Trenner "|" / dezente Linien
+    gold            = {0.95, 0.85, 0.1,  1.0},  -- Preis/Wert (gold)
+    lagerBlau       = {0.0,  0.85, 1.0,  1.0},  -- Lager-Aufklappen / "v"-Marker (blau)
+    bauLimit        = {1.0,  0.55, 0.1,  1.0},  -- Baustelle/Lager-Station (limitierte Annahme, kein echter Markt) - orange
+}
+
 DispoList.timePast       = 0
 DispoList.refreshInterval  = 5000 -- ms: 5000/15000/30000/60000/120000/0=manuell (Default: 5 Sekunden)
 DispoList.refreshSinceMs   = 0     -- ms seit letztem Refresh (für Countdown-Anzeige)
@@ -47,6 +81,10 @@ DispoList.lagerCache          = {}     -- gecachte Lager-Daten pro FillType {[ft
 DispoList.baustelleMode       = false  -- Baustellen-Ansicht (Kran-Toggle) an/aus
 DispoList.baustelleRows       = {}     -- gecachte Baustellen-Zeilen (pro Refresh gebaut): {kind="proj"|"mat", ...}
 DispoList.baustelleViewFt     = nil    -- in Baustellen-Ansicht aufgeklapptes Material (Lager-Drilldown), nil = zu
+DispoList.kassettenMode       = false  -- Kassetten-Shops-Ansicht (Geldkassette-Toggle) an/aus
+DispoList.kassettenRows       = {}     -- gecachte Kassetten-Shop-Zeilen (pro Refresh): {kind="shop"|"ware", ...}
+DispoList.kassettenLeer       = {}     -- Shops mit leerem Eingang (fuer Ticker)
+DispoList.kassettenTickerIds  = {}     -- {[Shopname]=msgId} laufende Ticker-Meldungen
 DispoList.reserveStunden      = 24     -- Zeitreserve für Fabrik-Puffer in Stunden
 DispoList.ecEnabled           = true   -- Baustellen-Bedarf (EverythingConstructable) abziehen? Default AN
 DispoList.lastEcProjectCount  = 0      -- Anzahl offener Baustellen (letzter Scan, fuer Settings-Anzeige)
@@ -87,147 +125,8 @@ DispoList.BEREICHE_PRESET_ERWEITERT = {
 -- BEREICHE: wird zur Laufzeit von loadBereiche() aufgebaut — NICHT hardcoded
 DispoList.BEREICHE         = {}
 DispoList.BEREICHE_DELETED = {}  -- Blacklist: gelöschte Bereiche
-DispoList.VERSION          = "v1.3.0.0"-- Build-Version (in Icon-Zeile angezeigt)
+DispoList.VERSION          = "v1.4.0.0"-- Build-Version (in Icon-Zeile angezeigt)
 
--- ─── Lokalisierung ───────────────────────────────────────────────────────────
-local DL_L10N = {
-    spalte_ware        = {de="Ware",          en="Goods",        fr="Produit",      it="Merce",        pt="Produto",      es="Producto"},
-    spalte_bestand     = {de="Bestand",        en="Stock",        fr="Stock",        it="Stock",        pt="Estoque",      es="Stock"},
-    spalte_frei        = {de="Frei",           en="Free",         fr="Libre",        it="Libero",       pt="Livre",        es="Libre"},
-    spalte_preis       = {de="Preis",          en="Price",        fr="Prix",         it="Prezzo",       pt="Preço",        es="Precio"},
-    spalte_max         = {de="Max",            en="Max",          fr="Max",          it="Max",          pt="Max",          es="Max"},
-    spalte_wert        = {de="Wert",           en="Value",        fr="Valeur",       it="Valore",       pt="Valor",        es="Valor"},
-    spalte_frei_wert   = {de="Frei Wert",      en="Free Val.",    fr="Val. libre",   it="Val. lib.",    pt="Val. livre",   es="Val. libre"},
-    spalte_frei_max    = {de="Frei Max",       en="Free Max",     fr="Max libre",    it="Max lib.",     pt="Max livre",    es="Max libre"},
-    spalte_bester      = {de="Bester",         en="Best",         fr="Meilleur",     it="Migliore",     pt="Melhor",       es="Mejor"},
-    spalte_monat       = {de="Monat",          en="Month",        fr="Mois",         it="Mese",         pt="Mes",          es="Mes"},
-    status_pausiert    = {de="Pausiert",       en="Paused",       fr="En pause",     it="In pausa",     pt="Pausado",      es="Pausado"},
-    status_manuell     = {de="manuell",        en="manual",       fr="manuel",       it="manuale",      pt="manual",       es="manual"},
-    tooltip_baustellemode = {de="Baustellen-Ansicht ein/aus (zeigt offenen Materialbedarf je Baustelle)",en="Construction view on/off (shows open material demand per site)",fr="Vue chantiers on/off (besoin de materiaux par chantier)",it="Vista cantieri on/off (fabbisogno materiali per cantiere)",pt="Vista de obras on/off (necessidade de material por obra)",es="Vista de obras on/off (necesidad de material por obra)"},
-    baustelle_titel    = {de="Baustellen",      en="Construction sites",fr="Chantiers",  it="Cantieri",     pt="Obras",        es="Obras"},
-    baustelle_leer     = {de="Keine aktiven Baustellen",en="No active construction sites",fr="Aucun chantier actif",it="Nessun cantiere attivo",pt="Nenhuma obra ativa",es="Ninguna obra activa"},
-    spalte_braucht     = {de="braucht",         en="needs",        fr="besoin",       it="serve",        pt="precisa",      es="necesita"},
-    spalte_imlager     = {de="im Lager",        en="in stock",     fr="en stock",     it="in magazzino", pt="em estoque",   es="en stock"},
-    filter_titel       = {de="DispoList Filter",en="DispoList Filter",fr="DispoList Filtre",it="DispoList Filtro",pt="DispoList Filtro",es="DispoList Filtro"},
-    filter_bereich_lbl = {de="Bereich:",       en="Zone:",        fr="Zone:",        it="Zona:",        pt="Zona:",        es="Zona:"},
-    filter_station_lbl = {de="Station:",       en="Station:",     fr="Station:",     it="Stazione:",    pt="Estacao:",     es="Estacion:"},
-    filter_suche_lbl   = {de="Suche:",         en="Search:",      fr="Chercher:",    it="Cerca:",       pt="Buscar:",      es="Buscar:"},
-    filter_bereich_hint= {de="Bitte links einen Bereich auswaehlen",en="Please select a zone on the left",fr="Selectionner une zone a gauche",it="Seleziona una zona a sinistra",pt="Selecione uma zona a esquerda",es="Seleccione una zona a la izquierda"},
-    filter_station_hint= {de="Bitte links eine Station auswaehlen",en="Please select a station on the left",fr="Selectionner une station a gauche",it="Seleziona una stazione a sinistra",pt="Selecione uma estacao a esquerda",es="Seleccione una estacion a la izquierda"},
-    filter_keine_treffer={de="Keine Treffer",  en="No results",   fr="Aucun resultat",it="Nessun risultato",pt="Sem resultados",es="Sin resultados"},
-    hint_zl_empty      = {de="Keine ZL/CW-Bereiche gefunden — bitte ZL/CW-Preset laden (Presets-Button)",en="No ZL/CW zones found — please load the ZL/CW preset (Presets button)",fr="Aucune zone ZL/CW trouvee — veuillez charger le preset ZL/CW (bouton Presets)",it="Nessuna zona ZL/CW trovata — carica il preset ZL/CW (pulsante Presets)",pt="Nenhuma zona ZL/CW encontrada — carregue a predefinicao ZL/CW (botao Presets)",es="No se encontraron zonas ZL/CW — cargue el preset ZL/CW (boton Presets)"},
-    filter_gesamtwert  = {de="Gesamtwert freier Waren:",en="Total value of free goods:",fr="Valeur totale produits libres:",it="Valore totale merci libere:",pt="Valor total produtos livres:",es="Valor total productos libres:"},
-    hint_lager_check   = {de="Nichts sichtbar? Pruefe die aktiven Lagertypen (Einstellungen)",en="Nothing shown? Check your active storage types (Settings)",fr="Rien d'affiche? Verifiez les types de stockage actifs (Parametres)",it="Niente visualizzato? Controlla i tipi di deposito attivi (Impostazioni)",pt="Nada visivel? Verifique os tipos de armazenamento ativos (Definicoes)",es="Nada visible? Comprueba los tipos de almacen activos (Ajustes)"},
-    hint_kein_bestand  = {de="Aktuell kein verkaufbarer Bestand",en="No sellable stock right now",fr="Aucun stock vendable actuellement",it="Nessuna merce vendibile al momento",pt="Sem stock vendavel de momento",es="Sin existencias vendibles ahora mismo"},
-    -- Gruppe A: Buttons / Kontextmenue / Dialoge
-    btn_neuer_bereich  = {de="+ Neuer Bereich",en="+ New zone",fr="+ Nouvelle zone",it="+ Nuova zona",pt="+ Nova zona",es="+ Nueva zona"},
-    btn_rueckgaengig   = {de="<< Rueckgaengig",en="<< Undo",fr="<< Annuler",it="<< Annulla",pt="<< Desfazer",es="<< Deshacer"},
-    tt_suche_schliessen= {de="Suche schliessen",en="Close search",fr="Fermer la recherche",it="Chiudi la ricerca",pt="Fechar a pesquisa",es="Cerrar la busqueda"},
-    tt_suche_oeffnen   = {de="Suche oeffnen  |  Achtung: Tasten steuern weiterhin das Fahrzeug!",en="Open search  |  Note: keys still control the vehicle!",fr="Ouvrir la recherche  |  Attention: les touches commandent toujours le vehicule!",it="Apri la ricerca  |  Attenzione: i tasti comandano ancora il veicolo!",pt="Abrir a pesquisa  |  Atencao: as teclas continuam a controlar o veiculo!",es="Abrir la busqueda  |  Atencion: las teclas siguen controlando el vehiculo!"},
-    hint_bereich_wahl  = {de="Bereich auswaehlen",en="Select zone",fr="Selectionner une zone",it="Seleziona una zona",pt="Selecionar uma zona",es="Seleccionar una zona"},
-    hint_station_wahl  = {de="Station auswaehlen",en="Select station",fr="Selectionner une station",it="Seleziona una stazione",pt="Selecionar uma estacao",es="Seleccionar una estacion"},
-    dlg_bereich_umbenennen={de="Bereich umbenennen",en="Rename zone",fr="Renommer la zone",it="Rinomina zona",pt="Renomear zona",es="Renombrar zona"},
-    dlg_bereich_loeschen={de="Bereich loeschen",en="Delete zone",fr="Supprimer la zone",it="Elimina zona",pt="Eliminar zona",es="Eliminar zona"},
-    ctx_umbenennen     = {de="Umbenennen",en="Rename",fr="Renommer",it="Rinomina",pt="Renomear",es="Renombrar"},
-    ctx_loeschen       = {de="Loeschen",en="Delete",fr="Supprimer",it="Elimina",pt="Eliminar",es="Eliminar"},
-    -- Gruppe B: Einstellungsmenue (Ueberschriften/Buttons)
-    set_spalten_anzeigen={de="Spalten anzeigen",en="Show columns",fr="Afficher les colonnes",it="Mostra colonne",pt="Mostrar colunas",es="Mostrar columnas"},
-    set_einstellungen  = {de="Einstellungen",en="Settings",fr="Parametres",it="Impostazioni",pt="Definicoes",es="Ajustes"},
-    set_fabrik_puffer  = {de="Fabrik-Puffer: ",en="Production buffer: ",fr="Tampon de production: ",it="Buffer di produzione: ",pt="Buffer de producao: ",es="Bufer de produccion: "},
-    set_puffer_formel  = {de="Bestand - (Bedarf/h x Puffer) = Freie Menge",en="Stock - (demand/h x buffer) = free amount",fr="Stock - (besoin/h x tampon) = quantite libre",it="Scorte - (fabbisogno/h x buffer) = quantita libera",pt="Estoque - (procura/h x buffer) = quantidade livre",es="Existencias - (demanda/h x bufer) = cantidad libre"},
-    set_lagertypen     = {de="Lagertypen (was wird gezaehlt)",en="Storage types (what is counted)",fr="Types de stockage (ce qui est compte)",it="Tipi di deposito (cosa viene conteggiato)",pt="Tipos de armazenamento (o que e contado)",es="Tipos de almacen (que se cuenta)"},
-    set_zlgebaeude      = {de="Zentrallager-Gebaeude (fuer Stern/CW-Filter)",en="Central warehouse buildings (for star/CW filter)",fr="Batiments entrepot central (filtre etoile/CW)",it="Edifici magazzino centrale (filtro stella/CW)",pt="Edificios armazem central (filtro estrela/CW)",es="Edificios almacen central (filtro estrella/CW)"},
-    set_bereiche_preset= {de="Bereiche-Preset",en="Zone preset",fr="Preset de zones",it="Preset zone",pt="Predefinicao de zonas",es="Preajuste de zonas"},
-    set_selbst         = {de="Selbst einrichten (keine Aenderung)",en="Set up yourself (no change)",fr="Configurer soi-meme (aucun changement)",it="Configura da solo (nessuna modifica)",pt="Configurar por si (sem alteracoes)",es="Configurar tu mismo (sin cambios)"},
-    set_zl_laden       = {de="Zentrallager-Preset laden",en="Load central warehouse preset",fr="Charger le preset entrepot central",it="Carica preset magazzino centrale",pt="Carregar predefinicao armazem central",es="Cargar preajuste almacen central"},
-    set_giants_laden   = {de="Giants-Standard laden",en="Load Giants default",fr="Charger le standard Giants",it="Carica standard Giants",pt="Carregar padrao Giants",es="Cargar estandar Giants"},
-    -- Gruppe B: Spalten-Labels (Einstellungsmenue)
-    col_bestand        = {de="Bestand",en="Stock",fr="Stock",it="Scorte",pt="Estoque",es="Existencias"},
-    col_frei           = {de="Frei",en="Free",fr="Libre",it="Libero",pt="Livre",es="Libre"},
-    col_preis          = {de="Preis/1000l",en="Price/1000l",fr="Prix/1000l",it="Prezzo/1000l",pt="Preco/1000l",es="Precio/1000l"},
-    col_maxpreis       = {de="Max/1000l",en="Max/1000l",fr="Max/1000l",it="Max/1000l",pt="Max/1000l",es="Max/1000l"},
-    col_wert           = {de="Wert",en="Value",fr="Valeur",it="Valore",pt="Valor",es="Valor"},
-    col_vkwert         = {de="Frei Wert",en="Free value",fr="Valeur libre",it="Valore libero",pt="Valor livre",es="Valor libre"},
-    col_max            = {de="Max €",en="Max €",fr="Max €",it="Max €",pt="Max €",es="Max €"},
-    col_vkmax          = {de="Frei Max",en="Free max",fr="Max libre",it="Max libero",pt="Max livre",es="Max libre"},
-    col_monat          = {de="Bester Monat",en="Best month",fr="Meilleur mois",it="Miglior mese",pt="Melhor mes",es="Mejor mes"},
-    -- Gruppe B: Lagertyp-Namen
-    lt_zentrallager    = {de="Zentrallager",en="Central warehouse",fr="Entrepot central",it="Magazzino centrale",pt="Armazem central",es="Almacen central"},
-    lt_silo            = {de="Silos & Tanks",en="Silos & tanks",fr="Silos & citernes",it="Sili & serbatoi",pt="Silos & tanques",es="Silos y tanques"},
-    lt_silo_ext        = {de="Silo-Erweiterungen",en="Silo extensions",fr="Extensions de silo",it="Estensioni sili",pt="Extensoes de silo",es="Extensiones de silo"},
-    lt_husbandry       = {de="Tierhaltung",en="Animal pens",fr="Elevages",it="Allevamenti",pt="Estabulos",es="Establos"},
-    lt_manure          = {de="Misthaufen",en="Manure heaps",fr="Tas de fumier",it="Cumuli di letame",pt="Montes de estrume",es="Montones de estiercol"},
-    lt_beehive         = {de="Bienenstock",en="Beehive",fr="Ruche",it="Alveare",pt="Colmeia",es="Colmena"},
-    lt_bunker          = {de="Fahrsilos",en="Bunker silos",fr="Silos-couloirs",it="Trincee",pt="Silos-trincheira",es="Silos zanja"},
-    lt_objektlager     = {de="Objektlager (Hallen)",en="Object storage (halls)",fr="Stockage d'objets (halls)",it="Deposito oggetti (capannoni)",pt="Armazem de objetos (galpoes)",es="Almacen de objetos (naves)"},
-    lt_bale            = {de="Ballen (Feld/Hof)",en="Bales (field/yard)",fr="Balles (champ/cour)",it="Balle (campo/cortile)",pt="Fardos (campo/patio)",es="Balas (campo/patio)"},
-    lt_pallet          = {de="Paletten (Fahrzeuge)",en="Pallets (vehicles)",fr="Palettes (vehicules)",it="Pallet (veicoli)",pt="Paletes (veiculos)",es="Palets (vehiculos)"},
-    lt_production_out  = {de="Fabrik-Ausgangslager",en="Factory output storage",fr="Stockage sortie usine",it="Deposito uscita produzione",pt="Armazem de saida da fabrica",es="Almacen salida fabrica"},
-    -- Nachtrag Gruppe A: Filter-Tabs
-    tab_bereiche       = {de="Bereiche",en="Zones",fr="Zones",it="Zone",pt="Zonas",es="Zonas"},
-    tab_stationen      = {de="Stationen",en="Stations",fr="Stations",it="Stazioni",pt="Estacoes",es="Estaciones"},
-    tab_freischalt     = {de="Zusatzabnahme",en="Extra purchase",fr="Achat suppl.",it="Acquisto extra",pt="Compra extra",es="Compra extra"},
-    tooltip_freischalt = {de="Zusatzabnahme: Verkaufsstationen zusaetzliche Waren annehmen lassen",en="Extra purchase: let selling stations accept extra goods",fr="Achat suppl.: laisser les stations accepter des produits supplementaires",it="Acquisto extra: fai accettare merci extra alle stazioni",pt="Compra extra: fazer estacoes aceitarem produtos extra",es="Compra extra: que las estaciones acepten productos extra"},
-    fs_col_ware        = {de="Ware  (klick = Zusatzabnahme)",en="Goods  (click = extra purchase)",fr="Produit  (clic = achat suppl.)",it="Merce  (clic = acquisto extra)",pt="Produto  (clique = compra extra)",es="Producto  (clic = compra extra)"},
-    fs_hint_wahl       = {de="Bitte links eine Station auswaehlen",en="Please select a station on the left",fr="Selectionner une station a gauche",it="Seleziona una stazione a sinistra",pt="Selecione uma estacao a esquerda",es="Seleccione una estacion a la izquierda"},
-    fs_leg_native      = {de="ab Werk",en="factory",fr="d'origine",it="di serie",pt="de fabrica",es="de fabrica"},
-    fs_leg_frei        = {de="Zusatzabnahme",en="extra purchase",fr="achat suppl.",it="acquisto extra",pt="compra extra",es="compra extra"},
-    fs_leg_verfuegbar  = {de="verfuegbar",en="available",fr="disponible",it="disponibile",pt="disponivel",es="disponible"},
-    -- Gruppe C: Bereichsnamen (Presets) - key bleibt Speicher-ID, nur Anzeige uebersetzt
-    ber_schuettgut     = {de="Schuettgut",en="Bulk goods",fr="Vrac",it="Sfuso",pt="Granel",es="A granel"},
-    ber_fluessig       = {de="Fluessig",en="Liquids",fr="Liquides",it="Liquidi",pt="Liquidos",es="Liquidos"},
-    ber_tier           = {de="Tier",en="Animals",fr="Animaux",it="Animali",pt="Animais",es="Animales"},
-    ber_stueckgut      = {de="Stueckgut",en="General cargo",fr="Marchandises",it="Merci varie",pt="Carga geral",es="Carga general"},
-    ber_produkte       = {de="Produkte",en="Products",fr="Produits",it="Prodotti",pt="Produtos",es="Productos"},
-    ber_holz           = {de="Holz",en="Wood",fr="Bois",it="Legno",pt="Madeira",es="Madera"},
-    ber_kuehlung       = {de="Kuehlung",en="Refrigerated",fr="Refrigere",it="Refrigerati",pt="Refrigerados",es="Refrigerados"},
-    ber_lebensmittel   = {de="Lebensmittel",en="Food",fr="Alimentaire",it="Alimentari",pt="Alimentos",es="Alimentos"},
-    ber_obstgemuese    = {de="ObstGemuese",en="Fruit & veg",fr="Fruits & legumes",it="Frutta & verdura",pt="Fruta & legumes",es="Fruta & verduras"},
-    ber_werkstoffe     = {de="Werkstoffe",en="Materials",fr="Materiaux",it="Materiali",pt="Materiais",es="Materiales"},
-    ber_ballen         = {de="Ballen",en="Bales",fr="Balles",it="Balle",pt="Fardos",es="Balas"},
-    ber_milchtier      = {de="MilchTier",en="Milk & animals",fr="Lait & animaux",it="Latte & animali",pt="Leite & animais",es="Leche & animales"},
-    ber_futtermittel   = {de="Futtermittel",en="Feed",fr="Aliments betail",it="Mangimi",pt="Racao",es="Piensos"},
-    ber_betriebsstoffe = {de="Betriebsstoffe",en="Supplies",fr="Consommables",it="Materiali esercizio",pt="Consumiveis",es="Consumibles"},
-    ber_duenger        = {de="Duenger",en="Fertilizer",fr="Engrais",it="Fertilizzanti",pt="Fertilizantes",es="Fertilizantes"},
-    ber_forstwirtschaft= {de="Forstwirtschaft",en="Forestry",fr="Sylviculture",it="Silvicoltura",pt="Silvicultura",es="Silvicultura"},
-    ber_unverkaeuflich = {de="Unverkaeuflich",en="Not sellable",fr="Non vendable",it="Non vendibile",pt="Nao vendavel",es="No vendible"},
-    -- Gruppe D: Rest
-    hint_neue_waren    = {de=" neue Waren automatisch zugeordnet",en=" new goods auto-assigned",fr=" nouveaux produits attribues",it=" nuove merci assegnate",pt=" novos produtos atribuidos",es=" nuevos productos asignados"},
-    hint_kein_lager    = {de="(kein Lager gefunden)",en="(no storage found)",fr="(aucun stockage trouve)",it="(nessun deposito trovato)",pt="(nenhum armazem encontrado)",es="(ningun almacen encontrado)"},
-    dlg_neuer_bereich  = {de="Neuen Bereich anlegen",en="Create new zone",fr="Creer une nouvelle zone",it="Crea nuova zona",pt="Criar nova zona",es="Crear nueva zona"},
-    dlg_loeschen_frage = {de="Bereich wirklich loeschen:",en="Really delete zone:",fr="Vraiment supprimer la zone:",it="Eliminare davvero la zona:",pt="Eliminar mesmo a zona:",es="Eliminar de verdad la zona:"},
-    filter_zu_bereich  = {de="Zu Bereich hinzufuegen:",en="Add to zone:",fr="Ajouter a la zone:",it="Aggiungi alla zona:",pt="Adicionar a zona:",es="Anadir a la zona:"},
-    filter_legende_gruen={de="Gruen = zugeordnet",en="Green = assigned",fr="Vert = assigne",it="Verde = assegnato",pt="Verde = atribuido",es="Verde = asignado"},
-    filter_legende_grau= {de="Grau = nicht zugeordnet",en="Grey = not assigned",fr="Gris = non assigne",it="Grigio = non assegnato",pt="Cinza = nao atribuido",es="Gris = no asignado"},
-    filter_legende_blau= {de="Blau = in Bereich einordnen (links anklicken)",en="Blue = assign to zone (click left)",fr="Bleu = assigner a zone (clic gauche)",it="Blu = assegna a zona (clic sinistro)",pt="Azul = atribuir a zona (clique esquerdo)",es="Azul = asignar a zona (clic izquierdo)"},
-    filter_bereich_col = {de="Bereich",        en="Zone",         fr="Zone",         it="Zona",         pt="Zona",         es="Zona"},
-    filter_station_col = {de="Station",        en="Station",      fr="Station",      it="Stazione",     pt="Estacao",      es="Estacion"},
-    filter_bereich_ware= {de="Bereich / Ware", en="Zone / Goods", fr="Zone / Produit",it="Zona / Merce", pt="Zona / Produto",es="Zona / Producto"},
-    tooltip_bereiche   = {de="Bereiche-Ansicht: FillTypes nach Kategorien gruppiert",en="Zone view: FillTypes grouped by category",fr="Vue zones: FillTypes groupes par categorie",it="Vista zone: FillTypes raggruppati per categoria",pt="Vista de zonas: FillTypes agrupados por categoria",es="Vista zonas: FillTypes agrupados por categoria"},
-    tooltip_stationen  = {de="Stations-Ansicht: Filter pro Verkaufsstation",en="Station view: filter per selling station",fr="Vue stations: filtre par station de vente",it="Vista stazioni: filtro per stazione di vendita",pt="Vista estacoes: filtro por estacao de venda",es="Vista estaciones: filtro por estacion de venta"},
-    tooltip_presets    = {de="Preset laden oder Einstellungen oeffnen",en="Load preset or open settings",fr="Charger un prereglage ou ouvrir les parametres",it="Carica preset o apri impostazioni",pt="Carregar predefinicao ou abrir definicoes",es="Cargar ajuste predef. o abrir configuracion"},
-    tooltip_cwonly     = {de="ZL/CW only: nur Zentrallager-Bereiche anzeigen (ZL-Preset empfohlen)",en="ZL/CW only: show central warehouse zones only (ZL/CW preset recommended)",fr="ZL/CW only: afficher zones entrepot central uniquement (preset ZL/CW recommande)",it="ZL/CW only: mostra solo zone magazzino centrale (preset ZL/CW consigliato)",pt="ZL/CW only: mostrar apenas zonas do armazem central (predefinicao ZL/CW recomendada)",es="ZL/CW only: mostrar solo zonas almacen central (preset ZL/CW recomendado)"},
-    tooltip_bereichefilter = {de="Bereiche-Filter oeffnen/schliessen",en="Open/close zone filter",fr="Ouvrir/fermer le filtre de zones",it="Apri/chiudi filtro zone",pt="Abrir/fechar filtro de zonas",es="Abrir/cerrar filtro de zonas"},
-    tooltip_sort_byvalue = {de="Sortierung: nach Erloeswert (klick fuer A-Z)",en="Sorting: by revenue value (click for A-Z)",fr="Tri: par valeur de revente (clic pour A-Z)",it="Ordinamento: per valore di vendita (clic per A-Z)",pt="Ordenacao: por valor de venda (clique para A-Z)",es="Orden: por valor de venta (clic para A-Z)"},
-    tooltip_sort_byname = {de="Sortierung: A-Z (klick fuer Erloeswert)",en="Sorting: A-Z (click for revenue value)",fr="Tri: A-Z (clic pour valeur de revente)",it="Ordinamento: A-Z (clic per valore di vendita)",pt="Ordenacao: A-Z (clique para valor de venda)",es="Orden: A-Z (clic para valor de venta)"},
-    tooltip_search_close = {de="Suche schliessen  |  Achtung: Tasten steuern weiterhin das Fahrzeug!",en="Close search  |  Warning: keys still control the vehicle!",fr="Fermer la recherche  |  Attention: les touches controlent toujours le vehicule!",it="Chiudi ricerca  |  Attenzione: i tasti controllano ancora il veicolo!",pt="Fechar busca  |  Atencao: as teclas ainda controlam o veiculo!",es="Cerrar busqueda  |  Atencion: las teclas siguen controlando el vehiculo!"},
-    tooltip_search_open = {de="Suche oeffnen  |  Achtung: Tasten steuern weiterhin das Fahrzeug - besser im Menue oder ausgestiegen benutzen!",en="Open search  |  Warning: keys still control the vehicle - better used in menu or on foot!",fr="Ouvrir la recherche  |  Attention: les touches controlent toujours le vehicule - a utiliser de preference dans le menu ou a pied!",it="Apri ricerca  |  Attenzione: i tasti controllano ancora il veicolo - meglio usarla nel menu o a piedi!",pt="Abrir busca  |  Atencao: as teclas ainda controlam o veiculo - melhor usar no menu ou a pe!",es="Abrir busqueda  |  Atencion: las teclas siguen controlando el vehiculo - mejor usarla en el menu o a pie!"},
-    tooltip_linedistance = {de="Zeilenabstand aendern (L=groesser / R=kleiner)",en="Change line spacing (L=bigger / R=smaller)",fr="Modifier l'interligne (L=plus grand / R=plus petit)",it="Modifica interlinea (L=piu grande / R=piu piccolo)",pt="Alterar espacamento entre linhas (L=maior / R=menor)",es="Cambiar interlineado (L=mas grande / R=mas pequeno)"},
-    tooltip_fontsize = {de="Schriftgroesse (L=groesser / R=kleiner)",en="Font size (L=bigger / R=smaller)",fr="Taille de police (L=plus grand / R=plus petit)",it="Dimensione carattere (L=piu grande / R=piu piccolo)",pt="Tamanho da fonte (L=maior / R=menor)",es="Tamano de fuente (L=mas grande / R=mas pequeno)"},
-    tooltip_settings = {de="Einstellungen: Spalten ein/ausschalten, Fabrikpuffer",en="Settings: toggle columns, factory buffer",fr="Parametres: activer/desactiver colonnes, tampon d'usine",it="Impostazioni: attiva/disattiva colonne, buffer di fabbrica",pt="Configuracoes: ativar/desativar colunas, buffer de fabrica",es="Ajustes: activar/desactivar columnas, bufer de fabrica"},
-    tooltip_bgalpha = {de="Hintergrund: hell/dunkel/transparent umschalten (L-Klick)",en="Background: toggle light/dark/transparent (left click)",fr="Arriere-plan: basculer clair/sombre/transparent (clic gauche)",it="Sfondo: alterna chiaro/scuro/trasparente (clic sinistro)",pt="Fundo: alternar claro/escuro/transparente (clique esquerdo)",es="Fondo: alternar claro/oscuro/transparente (clic izquierdo)"},
-    tooltip_refresh = {de="Refresh-Intervall: MouseL=hoeher / MouseR=niedriger (kuerzere Intervalle = mehr Performance-Last)",en="Refresh interval: MouseL=higher / MouseR=lower (shorter intervals = more performance impact)",fr="Intervalle d'actualisation: ClicG=plus long / ClicD=plus court (intervalles plus courts = plus d'impact sur les performances)",it="Intervallo di aggiornamento: TastoSx=piu alto / TastoDx=piu basso (intervalli piu brevi = maggiore impatto sulle prestazioni)",pt="Intervalo de atualizacao: BotaoEsq=maior / BotaoDir=menor (intervalos mais curtos = mais impacto no desempenho)",es="Intervalo de actualizacion: BotonIzq=mayor / BotonDer=menor (intervalos mas cortos = mas impacto en el rendimiento)"},
-    label_fabrikpuffer_baustelle = {de="Fabrikpuffer / Baustelle",en="Factory buffer / construction site",fr="Tampon d'usine / chantier",it="Buffer di fabbrica / cantiere",pt="Buffer de fabrica / obra",es="Bufer de fabrica / obra"},
-    freiinfo_ecsuffix = {de=" + Baustellen-Bedarf",en=" + construction site demand",fr=" + besoin chantier",it=" + fabbisogno cantiere",pt=" + necessidade de obra",es=" + necesidad de obra"},
-    freiinfo_base = {de="Frei = Bestand abzueglich %dh Fabrikpuffer",en="Free = stock minus %dh factory buffer",fr="Libre = stock moins %dh tampon d'usine",it="Libero = scorte meno %dh buffer di fabbrica",pt="Livre = estoque menos %dh buffer de fabrica",es="Libre = existencias menos %dh bufer de fabrica"},
-}
-
-function DL_t(key)
-    local lang = (g_languageShort or "en"):lower()
-    local entry = DL_L10N[key]
-    if not entry then return key end
-    return entry[lang] or entry["en"] or key
-end
 
 -- Bereichsnamen-Uebersetzung fuer die ANZEIGE.
 -- Der gespeicherte Name (Schluessel) bleibt unveraendert; nur die Anzeige wird
@@ -301,7 +200,10 @@ function DispoList.getBereich(fillTypeName)
 end
 
 -- ─── Produktionsbedarf ───────────────────────────────────────────────────────
-function DispoList:getProductionDemandPerHour()
+-- skipCashOutput=true ueberspringt die Kassetten-Shops (Output CASH): deren
+-- eigener Verbrauch darf NICHT von "verfuegbar" abgezogen werden, sonst frisst
+-- ein Hofladen sich selbst weg (er ist ja selbst Fabrik + Lieferziel).
+function DispoList:getProductionDemandPerHour(skipCashOutput)
     local demand = {}
     if g_currentMission == nil then return demand end
     local myFarmId   = g_currentMission:getFarmId()
@@ -309,18 +211,30 @@ function DispoList:getProductionDemandPerHour()
     local chainMgr   = g_currentMission.productionChainManager
     if chainMgr == nil then return demand end
 
+    local cashIdx = skipCashOutput and g_fillTypeManager:getFillTypeIndexByName("CASH") or nil
+
     local prodPoints = chainMgr:getProductionPointsForFarmId(myFarmId)
     if prodPoints ~= nil then
         for _, pp in pairs(prodPoints) do
-            local multi = 1
-            if pp.sharedThroughputCapacity and #pp.activeProductions ~= 0 then
-                multi = 1 / #pp.activeProductions
+            local isCashShop = false
+            if cashIdx ~= nil then
+                for _, prod in pairs(pp.productions or {}) do
+                    for _, o in pairs(prod.outputs or {}) do
+                        if o.type == cashIdx then isCashShop = true end
+                    end
+                end
             end
-            for _, prod in pairs(pp.activeProductions) do
-                for _, input in pairs(prod.inputs) do
-                    local ft  = input.type
-                    local lph = prod.cyclesPerHour * input.amount * multi * timeFactor
-                    demand[ft] = (demand[ft] or 0) + lph
+            if not isCashShop then
+                local multi = 1
+                if pp.sharedThroughputCapacity and #pp.activeProductions ~= 0 then
+                    multi = 1 / #pp.activeProductions
+                end
+                for _, prod in pairs(pp.activeProductions) do
+                    for _, input in pairs(prod.inputs) do
+                        local ft  = input.type
+                        local lph = prod.cyclesPerHour * input.amount * multi * timeFactor
+                        demand[ft] = (demand[ft] or 0) + lph
+                    end
                 end
             end
         end
@@ -429,6 +343,149 @@ function DispoList:buildBaustelleRows(allStockLevels)
     return rows
 end
 
+-- ─── Kassetten-Shops: Produktionsstellen mit CASH-Output ─────────────────────
+-- Liefert eine flache Zeilenliste fuer die Kassetten-Ansicht (Icon-Toggle):
+--   {kind="shop", name=<Shopname>, status="leer"|"voll"|"run"|"idle"}
+--   {kind="ware", name=<Warenname>, ftName=<intern>, free=<freie Kapazitaet>}
+-- Erkennung: eigene ProductionPoints, deren Produktions-Output CASH enthaelt
+-- (verifiziert 10.08. per dlspProd: Eisdiele/Fischbude/Imbiss/Hofmarkt = OUT CASH).
+-- Merkt zusaetzlich die leer-gelaufenen Shops in DispoList.kassettenLeer (Ticker).
+function DispoList:buildKassettenRows(allStockLevels)
+    local rows = {}
+    DispoList.kassettenLeer = {}
+    if g_currentMission == nil or g_currentMission.productionChainManager == nil then return rows end
+    local cashIdx = g_fillTypeManager:getFillTypeIndexByName("CASH")
+    if cashIdx == nil then return rows end
+    local myFarmId = g_currentMission:getFarmId()
+
+    -- Infrastruktur-Inputs (auto-versorgt, KEIN Liefergut per Anhaenger): nie listen.
+    -- Manche Shops nehmen sie am Eingang technisch doch an (getIsFillTypeSupported=true),
+    -- darum reicht der generische Filter nicht -> harter Namens-Ausschluss. Interne
+    -- ft.name verifiziert per dlspProd an der Eisdiele (Log 20.08.2026).
+    local KASSETTEN_SKIP = { MAINTENANCE = true, ELECTRICCHARGE = true }
+
+    local PS = ProductionPoint ~= nil and ProductionPoint.PROD_STATUS or nil
+    local S_MISS = PS ~= nil and PS.MISSING_INPUTS  or 2
+    local S_FULL = PS ~= nil and PS.NO_OUTPUT_SPACE or 3
+    local S_RUN  = PS ~= nil and PS.RUNNING         or 1
+
+    local ok, pps = pcall(function()
+        return g_currentMission.productionChainManager:getProductionPointsForFarmId(myFarmId)
+    end)
+    if not ok or pps == nil then
+        print("[DispoList] buildKassettenRows(): " .. tostring(pps))
+        return rows
+    end
+
+    for _, pp in pairs(pps) do
+        -- Produziert dieser Punkt CASH? Nur dann ist er ein Kassetten-Shop.
+        -- WICHTIG: pp.activeProductions (nur EINGESCHALTETE Rezepte) statt pp.productions
+        -- (ALLE Rezepte). So tauchen Zutaten abgeschalteter Rezepte nicht als rotes
+        -- "liefern" auf. Gleiche Quelle wie getProductionDemandPerHour (Konsistenz).
+        -- Nebeneffekt: Shop mit ALLEN Cash-Rezepten aus -> faellt aus der Liste (idle).
+        local isCash, inputIdx, worst = false, {}, nil
+        for _, prod in pairs(pp.activeProductions or {}) do
+            local producesCash = false
+            for _, o in pairs(prod.outputs or {}) do
+                if o.type == cashIdx then producesCash = true; isCash = true end
+            end
+            if producesCash then
+                for _, i in pairs(prod.inputs or {}) do
+                    if i.type ~= nil then inputIdx[i.type] = true end
+                end
+                -- schlimmsten Status merken: leer > voll > laeuft
+                local st = prod.status
+                if st == S_MISS then worst = S_MISS
+                elseif st == S_FULL and worst ~= S_MISS then worst = S_FULL
+                elseif st == S_RUN and worst == nil then worst = S_RUN end
+            end
+        end
+        if isCash then
+            local shopName = (pp.getName ~= nil) and tostring(pp:getName()) or "?"
+            local status = "idle"
+            if worst == S_MISS then status = "leer"
+            elseif worst == S_FULL then status = "voll"
+            elseif worst == S_RUN then status = "run" end
+            if status == "leer" then table.insert(DispoList.kassettenLeer, shopName) end
+
+            -- Annahmewaren mit Fuellstand einsammeln. free = zu liefern (bis voll),
+            -- level = aktueller Bestand (Kapazitaet - free), frac = Fuellgrad 0..1.
+            local wares = {}
+            for idx in pairs(inputIdx) do
+                local ft = g_fillTypeManager:getFillTypeByIndex(idx)
+                -- Zwei Filter kombiniert: (1) generisch — nur Waren, die der Shop-Eingang
+                -- ueberhaupt ANNIMMT (getIsFillTypeSupported); (2) harter Ausschluss der
+                -- Infrastruktur-Inputs (MAINTENANCE/ELECTRICCHARGE), die manche Shops am
+                -- Eingang zwar annehmen, die aber kein echtes Liefergut sind.
+                local deliverable = false
+                if ft ~= nil and pp.unloadingStation ~= nil then
+                    local okS, sup = pcall(pp.unloadingStation.getIsFillTypeSupported, pp.unloadingStation, idx)
+                    if okS then deliverable = (sup == true)
+                    else print("## DL KASSETTE getIsFillTypeSupported ERROR: " .. tostring(sup)) end
+                end
+                if ft ~= nil and deliverable and not KASSETTEN_SKIP[ft.name] then
+                    local free, cap = math.huge, nil
+                    if pp.unloadingStation ~= nil then
+                        local okF, f = pcall(pp.unloadingStation.getFreeCapacity, pp.unloadingStation, idx, myFarmId)
+                        if okF and f ~= nil then free = f end
+                        local okC, c = pcall(pp.unloadingStation.getCapacity, pp.unloadingStation, idx, myFarmId)
+                        if okC and c ~= nil and c > 0 then cap = c end
+                    end
+                    local level = (cap ~= nil and free ~= math.huge) and math.max(0, cap - free) or nil
+                    local frac  = (cap ~= nil and level ~= nil) and (level / cap) or 1
+                    -- verfuegbar = was du davon im aktuellen Filter (ZL/Lager) hast
+                    local avail = (allStockLevels ~= nil and allStockLevels[idx]) or 0
+                    local ber = DispoList.getBereich(ft.name)
+                    table.insert(wares, {name = ft.title or ft.name, ftName = ft.name,
+                                         free = free, level = level, frac = frac, avail = avail,
+                                         berOrder = (ber ~= nil and ber.order) or 99})
+                end
+            end
+            -- nach Bereich gruppieren (Order), innerhalb leerste zuerst, dann A-Z
+            table.sort(wares, function(a, b)
+                if (a.berOrder or 99) ~= (b.berOrder or 99) then return (a.berOrder or 99) < (b.berOrder or 99) end
+                if (a.frac or 1) ~= (b.frac or 1) then return (a.frac or 1) < (b.frac or 1) end
+                return string.lower(a.name or "") < string.lower(b.name or "")
+            end)
+
+            table.insert(rows, {kind = "shop", name = shopName, status = status})
+            for _, wr in ipairs(wares) do table.insert(rows, wr) end
+        end
+    end
+    return rows
+end
+
+-- HL-Text-Ticker mit den leer-gelaufenen Kassetten-Shops synchronisieren.
+-- Nur bei LEER (Eingang leer -> Shop steht still). Weiche Abhaengigkeit + pcall
+-- (Prinzip 5): kein Ticker vorhanden -> still nichts tun. Laufende Meldungen
+-- werden per Id gehalten und beim Aufloesen wieder entfernt (kein Neu-Spam).
+function DispoList:syncKassettenTicker()
+    DispoList.kassettenTickerIds = DispoList.kassettenTickerIds or {}
+    local ids     = DispoList.kassettenTickerIds
+    local mission = g_currentMission
+    local ticker  = mission ~= nil and mission.hlHudSystem ~= nil and mission.hlHudSystem.textTicker or nil
+    if ticker == nil then return end
+    local nowLeer = {}
+    for _, nm in ipairs(DispoList.kassettenLeer or {}) do nowLeer[nm] = true end
+    -- nicht mehr leer -> Meldung entfernen
+    for nm, id in pairs(ids) do
+        if not nowLeer[nm] then
+            pcall(function() ticker:removeMsgById(id) end)
+            ids[nm] = nil
+        end
+    end
+    -- neu leer -> Meldung hinzufuegen
+    for nm in pairs(nowLeer) do
+        if ids[nm] == nil then
+            local txt = string.format(DL_t("kassetten_leer_ticker"), nm)
+            local okA, id = pcall(function()
+                return ticker:addMsg({ text = txt, color = DL_Colors.bauLimit, separator = false })
+            end)
+            if okA and id ~= nil then ids[nm] = id end
+        end
+    end
+end
+
 -- ─── Daten sammeln ───────────────────────────────────────────────────────────
 -- ─── Lagertypen Scanner (einmalig beim Start) ────────────────────────────────
 function DispoList:scanLagertypen()
@@ -505,7 +562,10 @@ function DispoList:scanLagertypen()
     for k, _ in pairs(found) do table.insert(foundList, k) end
 end
 
--- Absicherung: scanLagertypen mit pcall
+-- BEWUSSTES Sicherheitsnetz (kein Bug-Versteck): scanLagertypen iteriert ALLE
+-- Placeables/Specs einer beliebigen Karte samt Fremdmods. Ein einziges exotisches
+-- Placeable darf nicht die ganze Lagertyp-Erkennung killen. Fehler wird GELOGGT
+-- (kein stilles Schlucken) und mit "alle Typen aktiv" sinnvoll aufgefangen.
 local _origScan = DispoList.scanLagertypen
 DispoList.scanLagertypen = function(self)
     local ok, err = pcall(_origScan, self)
@@ -522,6 +582,11 @@ DispoList.scanLagertypen = function(self)
 end
 
 function DispoList:refreshDispoTable()
+    -- BEWUSSTES Sicherheitsnetz um den Voll-Scan: _refreshDispoTableInner liest
+    -- viele Fremd-/Karten-Daten (Storage-fillLevels, getName, Spec-Erkennung), die
+    -- auf unbekannten Karten/Modsets abweichen koennen. Fehler wird GELOGGT und die
+    -- Anzeige leer zurueckgesetzt, statt dass das HUD komplett bricht. _refreshRunning
+    -- verhindert zusaetzlich Reentrancy. (Kein stilles Verschlucken eigener Bugs.)
     if DispoList._refreshRunning then return end
     DispoList._refreshRunning = true
     local ok, err = pcall(function() DispoList:_refreshDispoTableInner() end)
@@ -806,16 +871,32 @@ function DispoList:_refreshDispoTableInner()
             if not isOwnStation then
                 for ft, ok in pairs(station.acceptedFillTypes) do
                     if ok == true and allStockLevels[ft] ~= nil then
-                        -- getEffectiveFillTypePrice() liefert bereits den fertigen, tatsächlich gezahlten
-                        -- Preis inkl. Schwierigkeitsgrad-Faktor -> NICHT nochmal mit priceMultiplier multiplizieren
-                        -- (siehe TSStockCheck als Referenz, Zeile 238: kein priceMultiplier hier)
-                        local price = station:getEffectiveFillTypePrice(ft)
-                        if bestStation[ft] == nil or price > bestStation[ft].price then
-                            bestStation[ft] = {
-                                stationName = station:getName(),
-                                price       = price,
-                                priceTrend  = station:getCurrentPricingTrend(ft),
-                            }
+                        -- Freie Kapazitaet der Station fuer diese Ware. huge = echter Markt
+                        -- (unbegrenzt). Baustelle/Lager-Station mit vollem Lager -> 0 -> raus
+                        -- (Filter A). Der Wert wird zusaetzlich als Mengen-Deckel gespeichert
+                        -- (Filter A+): an so einer Station kann man nur bis freeCap abladen.
+                        -- Fehler/nil -> huge annehmen (nicht filtern/deckeln, Prinzip 5).
+                        local freeCap = math.huge
+                        local okC, fc = pcall(station.getFreeCapacity, station, ft, myFarmId)
+                        if okC then
+                            if fc ~= nil then freeCap = fc end
+                        else
+                            print("[DispoList] getFreeCapacity-Fehler bei '" .. tostring(station:getName())
+                                .. "': " .. tostring(fc))
+                        end
+                        if freeCap > 0 then
+                            -- getEffectiveFillTypePrice() liefert bereits den fertigen, tatsächlich gezahlten
+                            -- Preis inkl. Schwierigkeitsgrad-Faktor -> NICHT nochmal mit priceMultiplier multiplizieren
+                            -- (siehe TSStockCheck als Referenz, Zeile 238: kein priceMultiplier hier)
+                            local price = station:getEffectiveFillTypePrice(ft)
+                            if bestStation[ft] == nil or price > bestStation[ft].price then
+                                bestStation[ft] = {
+                                    stationName = station:getName(),
+                                    price       = price,
+                                    priceTrend  = station:getCurrentPricingTrend(ft),
+                                    freeCap     = freeCap,
+                                }
+                            end
                         end
                     end
                 end
@@ -849,6 +930,21 @@ function DispoList:_refreshDispoTableInner()
     -- Baustellen-Ansicht (Kran-Toggle) aus denselben Rohdaten bauen und cachen,
     -- damit der Draw pro Frame nur liest statt zu scannen. Stock = allStockLevels.
     DispoList.baustelleRows = DispoList:buildBaustelleRows(allStockLevels)
+    -- Kassetten-Shops (Produktionsstellen mit CASH-Output) + Leerlauf-Ticker.
+    -- "frei" respektiert denselben Bestand wie der Rest des HUDs (bei Stern nur ZL,
+    -- sonst Lagertyp-gefiltert) UND zieht den 24h-Fabrikpuffer + Baustellenbedarf ab
+    -- -- ABER OHNE die Kassetten-Shops selbst (skipCashOutput): deren eigener
+    -- Verbrauch darf "frei" nicht schmaelern, sonst frisst sich ein Hofladen selbst
+    -- weg. Ergebnis = frei lieferbar, ohne die anderen Fabriken zu bremsen.
+    local kassettenBase   = DispoList._zlFilterActive and zlStockLevels or stockLevels
+    local demandExclCash  = DispoList:getProductionDemandPerHour(true)
+    local kassettenFrei   = {}
+    for idx, lvl in pairs(kassettenBase) do
+        local res = (demandExclCash[idx] or 0) * (DispoList.reserveStunden or 24) + (constructionDemand[idx] or 0)
+        kassettenFrei[idx] = math.max(0, lvl - res)
+    end
+    DispoList.kassettenRows = DispoList:buildKassettenRows(kassettenFrei)
+    DispoList:syncKassettenTicker()
 
     -- Finale Liste
     -- WICHTIG: Basis ist allStockLevels (Gesamtbestand, unabhaengig von Lagertyp-
@@ -886,6 +982,7 @@ function DispoList:_refreshDispoTableInner()
                     stationName   = bestStation[idx].stationName,
                     price         = bestStation[idx].price,
                     priceTrend    = bestStation[idx].priceTrend,
+                    freeCap       = bestStation[idx].freeCap or math.huge,  -- Mengen-Deckel (Filter A+)
                     bereich       = ber,
                     maxPrice      = (function()
                         local maxP = 0
@@ -1013,10 +1110,17 @@ function DispoList:_refreshDispoTableInner()
     -- Stationswert berechnen (sellable * price pro Station) -- auf Basis dessen,
     -- was gerade im HUD sichtbar ist (displayEntries), nicht des Gesamtbestands.
     DispoList.stationValues = {}
+    -- Baustellen/Lager-Stationen (endliche Kapazitaet, kein echter Markt) merken,
+    -- damit der Draw ihren Kopf orange faerbt (Filter A+).
+    DispoList.stationLimited = {}
     for _, e in ipairs(displayEntries) do
         local st = e.stationName or ""
-        local val = math.max(0, e.sellable or 0) * (e.price or 0)
-        DispoList.stationValues[st] = (DispoList.stationValues[st] or 0) + val
+        -- Mengen-Deckel: an einer Baustelle/Lager-Station nur bis freeCap abladbar.
+        local sell = math.max(0, e.sellable or 0)
+        local fc   = e.freeCap or math.huge
+        if fc < sell then sell = fc end
+        DispoList.stationValues[st] = (DispoList.stationValues[st] or 0) + sell * (e.price or 0)
+        if fc ~= math.huge then DispoList.stationLimited[st] = true end
     end
     local stationValues = DispoList.stationValues
 
@@ -1285,6 +1389,7 @@ function DispoList:loadMap(mapName)
     -- ist zur Laufzeit nicht erlaubt -> "Event initialization only allowed at compile time").
     source(DispoList.modDir .. "scripte_dl/DL_SellpointUnlock.lua")
     source(DispoList.modDir .. "scripte_dl/draw/DL_FilterMenu_Draw.lua")
+    source(DispoList.modDir .. "scripte_dl/draw/DL_FilterMenu_Modes.lua")  -- Mode-Ansichten (ausgelagert)
     source(DispoList.modDir .. "scripte_dl/xml/DL_ColSettings_GuiBox.lua")
     source(DispoList.modDir .. "scripte_dl/xml/DL_TitelHud_XmlHud.lua")
     source(DispoList.modDir .. "scripte_dl/draw/DL_TitelHud_DrawHud.lua")
@@ -1382,6 +1487,24 @@ DispoList.filterRightScroll      = 1
 -- Pause-Toggle State
 DispoList.filterPauseEnabled = false
 
+-- Filter-Pause aufheben: Zeitraffer/Pause-Zustand wiederherstellen.
+-- Gemeinsamer Helfer, damit die Wiederherstellung nur an EINER Stelle gepflegt wird
+-- (wird beim Schliessen aus Haupt-, Filter- und Settings-Box aufgerufen).
+function DispoList.restoreFilterPause()
+    if not DispoList.filterPauseEnabled then return end
+    if DispoList.previousTimeScale ~= nil then
+        g_currentMission.timeScale = DispoList.previousTimeScale
+    end
+    if g_currentMission.missionInfo ~= nil and DispoList.previousMissionTimeScale ~= nil then
+        g_currentMission.missionInfo.timeScale = DispoList.previousMissionTimeScale
+    end
+    if g_currentMission.paused ~= nil then
+        g_currentMission.paused = false
+    end
+    DispoList.previousTimeScale = nil
+    DispoList.previousMissionTimeScale = nil
+end
+
 function DispoList:toggleFilterMenu()
     if g_currentMission.hlHudSystem == nil then return end
     local fbox = g_currentMission.hlHudSystem.hlBox:getData("DL_Filter_Box")
@@ -1418,13 +1541,7 @@ function DispoList:toggleFilterMenu()
         -- Suche beenden (Fokus+Kontext frei, Query leer)
         DispoList.resetSearch()
         -- Pause aufheben beim Schließen
-        if DispoList.filterPauseEnabled then
-            if DispoList.previousTimeScale ~= nil then g_currentMission.timeScale = DispoList.previousTimeScale end
-            if g_currentMission.missionInfo ~= nil and DispoList.previousMissionTimeScale ~= nil then g_currentMission.missionInfo.timeScale = DispoList.previousMissionTimeScale end
-            if g_currentMission.paused ~= nil then g_currentMission.paused = false end
-            DispoList.previousTimeScale = nil
-            DispoList.previousMissionTimeScale = nil
-        end
+        DispoList.restoreFilterPause()
     end
 end
 
@@ -1771,7 +1888,6 @@ function DispoList.resetSearch()
     DispoList.setSearchFocus(false)
     DispoList.filterSearchActive = false
     DispoList.filterSearchText   = ""
-    DispoList.searchFieldBounds  = nil   -- Feldgrenzen ungueltig -> kein versehentlicher Blur-Test
 end
 
 -- Haupt-Lupe komplett beenden: Fokus loesen (Kontext frei), Query leeren, Lupe aus.
@@ -1781,6 +1897,65 @@ function DispoList.resetMainSearch()
     DispoList.searchActive = false
     DispoList.searchText   = ""
     DispoList.searchDirty  = true
+end
+
+-- Gemeinsamer Renderer fuer BEIDE Suchfelder (Haupt-Lupe + Filter-Lupe) — eine
+-- Wahrheit statt zwei fast identischer Draw-Bloecke. Zeichnet den Fokus-
+-- Hintergrund (nur bei Fokus), den Text (hell/fett = tippt, grau = bestaetigt)
+-- und registriert den Klickbereich (= wieder ins Feld). Gibt das neue ixPos
+-- zurueck. `text`/`cursorVisible`/`whereClick` unterscheiden die zwei Felder.
+function DispoList.renderSearchField(box, typPos, ixPos, iconPosY, iconH, size, difW, bgLine, inArea, text, cursorVisible, whereClick)
+    local focused = DispoList.searchFocused
+    local cursor  = (focused and cursorVisible) and "|" or ""
+    local shown   = (text or "") .. cursor
+    if shown == "" then shown = " " end   -- leeres Feld trotzdem sichtbar
+    setTextAlignment(RenderText.ALIGN_LEFT)
+    setTextBold(focused)
+    local fieldX1 = ixPos
+    local fieldX2 = fieldX1 + getTextWidth(size, shown) + difW * 2
+    if focused and bgLine ~= nil then
+        g_currentMission.hlUtils.setOverlay(bgLine, fieldX1 - difW * 0.6, iconPosY - iconH * 0.30,
+            (fieldX2 - fieldX1) + difW * 0.4, iconH * 1.20)
+        g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.0, 0.42, 0.36, 0.90})
+        bgLine:render()
+    end
+    if focused then setTextColor(0.55, 1.0, 0.92, 1) else setTextColor(unpack(DL_Colors.grauMit)) end
+    renderText(fieldX1, iconPosY, size, utf8Substr(shown, 0))
+    setTextBold(false)
+    if inArea and not g_currentMission.hlUtils:disableInArea() then
+        box:setClickArea({fieldX1 - difW, fieldX2, iconPosY - iconH * 0.3, iconPosY + iconH * 0.7,
+            onClick = box.onSettingClick, whereClick = whereClick, typPos = typPos})
+    end
+    return fieldX2
+end
+
+-- Gemeinsamer Icon-Renderer fuer alle Hover-Icons (Haupt-HUD + Filter-Panel) —
+-- eine Wahrheit statt der frueheren fast identischen Zeichner (drawPng/drawFIcon;
+-- ein totes drittes hlIcon wurde entfernt). Farben aus dem Theme DL_Colors.
+-- Faerbt (Hover-Weiss / aktiv / inaktiv), zeichnet, setzt Tooltip + Klickflaeche.
+-- Das fertige Overlay `o` liefert der Aufrufer (Quelle unterscheidet sich je Box:
+-- eigenes PNG aus images/ vs. HL-Default-Icon aus dem Sheet). `geo` buendelt die
+-- Layout-Werte (siehe Aufrufstellen). Gibt das neue posX zurueck.
+function DispoList.drawHoverIcon(box, args, geo, o, posX, activeCol, inactiveCol, whereClick, tooltip)
+    g_currentMission.hlUtils.setOverlay(o, posX, geo.iconPosY, geo.iconW, geo.iconH)
+    g_currentMission.hlUtils.setStateInArea(o)
+    local inIcon = (o.mouseInArea ~= nil) and o.mouseInArea() or false
+    local col = inIcon and DL_Colors.iconHover
+             or activeCol or inactiveCol or DL_Colors.iconIdle
+    g_currentMission.hlUtils.setBackgroundColor(o, col)
+    o:render()
+    if inIcon and tooltip and g_currentMission.hlHudSystem.infoDisplay.on then
+        local ttSize = geo.size * 0.85
+        local ttW = getTextWidth(ttSize, utf8Substr(tooltip .. "  ", 0)) * 1.1
+        g_currentMission.hlHudSystem:addTextDisplay({txt=tooltip, maxLine=0, txtSize=ttSize,
+            posX = geo.x + (geo.w - ttW) * 0.5,
+            posY = geo.iconLineY + geo.lineH * 1.0})
+    end
+    if whereClick and geo.inArea and not g_currentMission.hlUtils:disableInArea() then
+        box:setClickArea({o.x, o.x+o.width, o.y, o.y+o.height,
+            onClick=box.onSettingClick, whereClick=whereClick, typPos=args.typPos})
+    end
+    return posX + geo.iconW + geo.difW
 end
 
 -- Kompatibilitaets-Shim: alte Aufrufe von setInputBlocking(bool) -> Fokus setzen.
