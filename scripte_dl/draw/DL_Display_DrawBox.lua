@@ -13,6 +13,64 @@ function DL_Display_DrawBox.fmtMon(val)
     return utf8Substr(g_i18n:formatMoney(math.floor(val or 0), 0, false), 0)
 end
 
+-- Aufgeklappte Lager-Zeilen einer Ware/eines Materials zeichnen.
+-- Gemeinsamer Helfer fuer Hauptliste (mit Scroll) und Baustellen-Ansicht (ohne Scroll),
+-- damit Farben und Layout der Lager-Aufklappung nur an EINER Stelle gepflegt werden.
+--   scrollOffset == nil -> Baustellen-Modus: jede Zeile wird gezeichnet (kein Scroll-Guard).
+--   scrollOffset ~= nil -> Hauptlisten-Modus: Zeile nur zeichnen wenn sichtbar (lineIdx-Guard).
+-- Rueckgabe: nextPosY, lineIdx, stop  (stop == true -> aufrufende Schleife soll break-en)
+function DL_Display_DrawBox.renderLagerRows(ftName, nextPosY, y, lineH, size, difW, baseNameX, rightEdge, lineIdx, scrollOffset)
+    local fmtVol = DL_Display_DrawBox.fmtVol
+    local lager  = DispoList.lagerCache[ftName] or {}
+    local scroll = (scrollOffset ~= nil)
+
+    if #lager == 0 then
+        lineIdx = lineIdx + 1
+        if (not scroll) or (lineIdx >= scrollOffset and nextPosY >= y) then
+            setTextAlignment(RenderText.ALIGN_LEFT)
+            setTextColor(unpack(DL_Colors.grauMit)); setTextBold(false)
+            renderText(baseNameX + difW * 2, nextPosY, size, utf8Substr(DL_t("hint_kein_lager"), 0))
+            setTextColor(unpack(DL_Colors.white))
+            nextPosY = nextPosY - lineH
+            if nextPosY < y then return nextPosY, lineIdx, true end
+        end
+        return nextPosY, lineIdx, false
+    end
+
+    -- Dynamische Spaltenbreite: max. Namenlaenge bestimmen
+    local maxNameW = 0
+    for _, lag in ipairs(lager) do
+        local tw = getTextWidth(size, utf8Substr((lag.name or "?") .. "  ", 0))
+        if tw > maxNameW then maxNameW = tw end
+    end
+    local lagerNameX  = baseNameX + difW * 2
+    local lagerMengeX = math.min(lagerNameX + maxNameW + difW, rightEdge)
+
+    for _, lag in ipairs(lager) do
+        lineIdx = lineIdx + 1
+        if (not scroll) or (lineIdx >= scrollOffset and nextPosY >= y) then
+            setTextAlignment(RenderText.ALIGN_LEFT)
+            -- Lager-Zeilen im gleichen Blau wie das Aufklapp-"v" (bessere Sichtbarkeit)
+            setTextColor(unpack(DL_Colors.lagerBlau)); setTextBold(false)
+            renderText(lagerNameX, nextPosY, size, utf8Substr(lag.name or "?", 0))
+            setTextAlignment(RenderText.ALIGN_RIGHT)
+            setTextColor(unpack(DL_Colors.lagerBlau))
+            local capTxt
+            if lag.capacity ~= nil and lag.capacity > 0 then
+                capTxt = fmtVol(lag.level) .. " / " .. fmtVol(lag.capacity) .. " l"
+            else
+                capTxt = fmtVol(lag.level) .. " l"
+            end
+            renderText(math.min(lagerMengeX + getTextWidth(size, utf8Substr(capTxt .. " ", 0)), rightEdge),
+                nextPosY, size, utf8Substr(capTxt, 0))
+            setTextColor(unpack(DL_Colors.white))
+            nextPosY = nextPosY - lineH
+            if nextPosY < y then return nextPosY, lineIdx, true end
+        end
+    end
+    return nextPosY, lineIdx, false
+end
+
 function DL_Display_DrawBox.setBox(args)
     if args == nil or type(args) ~= "table" or args.typPos == nil or args.inArea == nil then return end
     local box = g_currentMission.hlHudSystem.box[args.typPos]
@@ -174,10 +232,17 @@ function DL_Display_DrawBox.setBox(args)
         box.screen.bounds[4] = math.max(1, n + 3)
     end
 
+    -- Kassetten-Shops-Ansicht: eigene Zeilenzahl (Rows + Icon-Zeile + Titel + Spaltenkopf)
+    if DispoList.kassettenMode then
+        local n = (DispoList.kassettenRows and #DispoList.kassettenRows) or 0
+        if n < 1 then n = 1 end
+        box.screen.bounds[4] = math.max(1, n + 3)
+    end
+
     local curM = g_currentMission.environment.currentPeriod or 1
 
-    -- Box-Hintergrund-Alpha (3 Stufen: normal, hell, transparent)
-    local bgAlphas = {0.88, 0.45, 0.12}
+    -- Box-Hintergrund-Alpha (4 Stufen: normal, hell, transparent, dunkel)
+    local bgAlphas = {0.88, 0.45, 0.12, 0.97}
     local bgAlpha  = bgAlphas[box.ownTable.bgAlphaIdx or 1]
     -- Global speichern damit Filter-Box denselben Wert nutzt
     DispoList._bgAlphaIdx = box.ownTable.bgAlphaIdx or 1
@@ -196,11 +261,15 @@ function DL_Display_DrawBox.setBox(args)
 
     if bgLine ~= nil then
         g_currentMission.hlUtils.setOverlay(bgLine, x, iconLineY - lineH*0.55, w, lineH*0.9)
-        g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.03, 0.03, 0.03, 0.95})
+        g_currentMission.hlUtils.setBackgroundColor(bgLine, DL_Colors.panelBg)
         bgLine:render()
     end
 
     local iconPosY = iconLineY - iconH * 0.5
+
+    -- Layout-Buendel fuer den gemeinsamen Icon-Renderer (DispoList.drawHoverIcon)
+    local iconGeo = {x=x, w=w, size=size, difW=difW, lineH=lineH,
+                     iconW=iconW, iconH=iconH, iconPosY=iconPosY, iconLineY=iconLineY, inArea=inArea}
 
     -- onSettingClick Handler (einmalig registrieren)
     if box.onSettingClick == nil then
@@ -294,7 +363,7 @@ function DL_Display_DrawBox.setBox(args)
 
             elseif wc == "dl_bgAlpha_" then
                 if btn == Input.MOUSE_BUTTON_LEFT then
-                    box.ownTable.bgAlphaIdx = ((box.ownTable.bgAlphaIdx or 1) % 3) + 1
+                    box.ownTable.bgAlphaIdx = ((box.ownTable.bgAlphaIdx or 1) % 4) + 1
                 end
 
             elseif wc == "dl_zlFilter_" then
@@ -314,7 +383,16 @@ function DL_Display_DrawBox.setBox(args)
             elseif wc == "dl_baustelleMode_" then
                 if btn == Input.MOUSE_BUTTON_LEFT then
                     DispoList.baustelleMode = not (DispoList.baustelleMode == true)
+                    if DispoList.baustelleMode then DispoList.kassettenMode = false end  -- Modi schliessen sich aus
                     DispoList.baustelleViewFt = nil  -- Aufklappung beim Moduswechsel schliessen
+                    box.screen.bounds[1] = 1  -- Scroll zuruecksetzen beim Moduswechsel
+                    box.needsUpdate = true
+                end
+
+            elseif wc == "dl_kassettenMode_" then
+                if btn == Input.MOUSE_BUTTON_LEFT then
+                    DispoList.kassettenMode = not (DispoList.kassettenMode == true)
+                    if DispoList.kassettenMode then DispoList.baustelleMode = false end  -- Modi schliessen sich aus
                     box.screen.bounds[1] = 1  -- Scroll zuruecksetzen beim Moduswechsel
                     box.needsUpdate = true
                 end
@@ -374,74 +452,23 @@ function DL_Display_DrawBox.setBox(args)
     end
 
     -- ── Icons zeichnen und Klick-Areas registrieren ───────────────────────────
-    local function iconInArea(o)
-        if o == nil then return false end
-        if o.mouseInArea == nil then g_currentMission.hlUtils.setStateInArea(o) end
-        return o.mouseInArea()
-    end
-
     -- ── Alle Icons links, der Reihe nach ──────────────────────────────────────
-    -- Hilfsfunktion: ein Icon zeichnen + ClickArea registrieren
-    local function drawIcon(o, posX, colorKey, whereClick, infoTxt)
-        if o == nil then return posX end
-        g_currentMission.hlUtils.setOverlay(o, posX, iconPosY, iconW, iconH)
-        g_currentMission.hlUtils.setStateInArea(o)
-        local inIcon = iconInArea(o)
-        local col = (type(colorKey) == "string")
-            and g_currentMission.hlUtils.getColor(colorKey, true)
-            or colorKey
-        g_currentMission.hlUtils.setBackgroundColor(o, col)
-        o:render()
-        if inIcon and infoTxt and g_currentMission.hlHudSystem.infoDisplay.on then
-            local ttSize = size * 0.85
-            local ttW = getTextWidth(ttSize, utf8Substr(infoTxt .. "  ", 0)) * 1.1
-            local ttH = getTextHeight(ttSize, utf8Substr(infoTxt, 0)) * 1.2
-            g_currentMission.hlHudSystem:addTextDisplay({txt=infoTxt, maxLine=0, txtSize=ttSize,
-                posX = x + (w - ttW) * 0.5,
-                posY = iconLineY + lineH * 1.0})
-        end
-        if inArea and not g_currentMission.hlUtils:disableInArea() and whereClick then
-            box:setClickArea({o.x, o.x+o.width, o.y, o.y+o.height,
-                onClick=box.onSettingClick, whereClick=whereClick, typPos=args.typPos})
-        end
-        return posX + iconW + difW
-    end
-
     -- Versionsanzeige: rechts in der Icon-Zeile (innerhalb der Box)
     local verStr = utf8Substr("DispoList " .. (DispoList.VERSION or "?"), 0)
     setTextAlignment(RenderText.ALIGN_RIGHT)
-    setTextColor(0.45, 0.45, 0.45, 1)
+    setTextColor(unpack(DL_Colors.grauDim))
     setTextBold(false)
     renderText(x + w - difW, iconLineY - size * 0.35, size * 0.7, verStr)
     setTextAlignment(RenderText.ALIGN_LEFT)
 
-    -- Hilfsfunktion: eigenes PNG-Icon laden, zeichnen, Tooltip + Klick
+    -- Hilfsfunktion: eigenes PNG-Icon laden -> gemeinsamer Renderer (drawHoverIcon)
     local function drawPng(key, filename, posX, activeColor, inactiveColor, whereClick, tooltip)
         if box.overlays[key] == nil then
             box.overlays[key] = Overlay.new(DispoList.modDir .. "images/" .. filename, 0, 0, iconW, iconH)
         end
         local o = box.overlays[key]
         if o == nil then return posX end
-        g_currentMission.hlUtils.setOverlay(o, posX, iconPosY, iconW, iconH)
-        g_currentMission.hlUtils.setStateInArea(o)
-        local inIcon = iconInArea(o)
-        local col = inIcon        and {0.95, 0.95, 0.95, 1.0}
-                 or activeColor   or inactiveColor or {0.65, 0.65, 0.65, 1.0}
-        g_currentMission.hlUtils.setBackgroundColor(o, col)
-        o:render()
-        if inIcon and tooltip and g_currentMission.hlHudSystem.infoDisplay.on then
-            local ttSize = size * 0.85
-            local ttW = getTextWidth(ttSize, utf8Substr(tooltip .. "  ", 0)) * 1.1
-            local ttH = getTextHeight(ttSize, utf8Substr(tooltip, 0)) * 1.2
-            g_currentMission.hlHudSystem:addTextDisplay({txt=tooltip, maxLine=0, txtSize=ttSize,
-                posX = x + (w - ttW) * 0.5,
-                posY = iconLineY + lineH * 1.0})
-        end
-        if whereClick and inArea and not g_currentMission.hlUtils:disableInArea() then
-            box:setClickArea({o.x, o.x+o.width, o.y, o.y+o.height,
-                onClick=box.onSettingClick, whereClick=whereClick, typPos=args.typPos})
-        end
-        return posX + iconW + difW
+        return DispoList.drawHoverIcon(box, args, iconGeo, o, posX, activeColor, inactiveColor, whereClick, tooltip)
     end
 
     local ixPos = x + difW * 2
@@ -451,15 +478,15 @@ function DL_Display_DrawBox.setBox(args)
         -- 1. Filter
         local filterActive = DispoList.filterMenuOpen
         ixPos = drawPng("dl_png_filter", "icon_filter.dds", ixPos,
-            filterActive and {0.1, 1.0, 0.1, 1.0} or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            filterActive and DL_Colors.iconActiveGreen or nil,
+            DL_Colors.iconIdle,
             "dl_filter_", DL_t("tooltip_bereichefilter"))
 
         -- 2. Sortierung
         local sortOn = DispoList.sortByValue
         ixPos = drawPng("dl_png_sort", "icon_sortierung.dds", ixPos,
-            sortOn and {0.2, 0.8, 1.0, 1.0} or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            sortOn and DL_Colors.iconActive or nil,
+            DL_Colors.iconIdle,
             "dl_sortToggle_",
             sortOn and DL_t("tooltip_sort_byvalue")
                     or DL_t("tooltip_sort_byname"))
@@ -467,71 +494,50 @@ function DL_Display_DrawBox.setBox(args)
         -- 3. Suche
         local sActive = DispoList.searchActive
         ixPos = drawPng("dl_png_suche", "icon_suche.dds", ixPos,
-            sActive and {0.2, 0.8, 1.0, 1.0} or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            sActive and DL_Colors.iconActive or nil,
+            DL_Colors.iconIdle,
             "dl_search_",
             sActive and DL_t("tooltip_search_close") or DL_t("tooltip_search_open"))
 
-        -- Suchfeld rechts neben der Lupe
+        -- Suchfeld rechts neben der Lupe (gemeinsamer Renderer, siehe DispoList.renderSearchField)
         if sActive then
-            local focused = DispoList.searchFocused
-            local cursor  = (focused and DispoList.searchCursorVisible) and "|" or ""
-            local shown   = DispoList.searchText .. cursor
-            if shown == "" then shown = " " end
-            setTextAlignment(RenderText.ALIGN_LEFT)
-            setTextBold(focused)
-            local fieldX1 = ixPos
-            local textW   = getTextWidth(size, shown)
-            local fieldX2 = fieldX1 + textW + difW * 2
-            -- Fokus-Hintergrund: unuebersehbare helle Box hinter dem Suchtext (nur bei Fokus)
-            if focused and bgLine ~= nil then
-                g_currentMission.hlUtils.setOverlay(bgLine, fieldX1 - difW * 0.6, iconPosY - iconH * 0.30,
-                    (fieldX2 - fieldX1) + difW * 0.4, iconH * 1.20)
-                g_currentMission.hlUtils.setBackgroundColor(bgLine, {0.0, 0.42, 0.36, 0.90})
-                bgLine:render()
-            end
-            -- fokussiert = helles Cyan + fett (tippt), Ruhe = gedimmtes Grau (bestaetigt)
-            if focused then setTextColor(0.55, 1.0, 0.92, 1) else setTextColor(0.5, 0.5, 0.5, 1) end
-            renderText(fieldX1, iconPosY, size, utf8Substr(shown, 0))
-            setTextBold(false)
-            ixPos = fieldX2
-            -- Klickbereich ueber dem Suchtext -> wieder tippen
-            if inArea and not g_currentMission.hlUtils:disableInArea() then
-                box:setClickArea({fieldX1 - difW, ixPos, iconPosY - iconH * 0.3, iconPosY + iconH * 0.7,
-                    onClick = box.onSettingClick, whereClick = "dl_searchfield_main_", typPos = args.typPos})
-            end
+            ixPos = DispoList.renderSearchField(box, args.typPos, ixPos, iconPosY, iconH, size, difW,
+                bgLine, inArea, DispoList.searchText, DispoList.searchCursorVisible, "dl_searchfield_main_")
         end
 
         -- 5. Zeilenabstand
         ixPos = drawPng("dl_png_zeilenabstand", "icon_zeilenabstand.dds", ixPos,
-            nil, {0.65, 0.65, 0.65, 1.0},
+            nil, DL_Colors.iconIdle,
             "dl_lineDistance_", DL_t("tooltip_linedistance"))
 
         -- 6. Schriftgroesse
         ixPos = drawPng("dl_png_schrift", "icon_schrift.dds", ixPos,
-            nil, {0.65, 0.65, 0.65, 1.0},
+            nil, DL_Colors.iconIdle,
             "dl_zoomToggle_", DL_t("tooltip_fontsize"))
 
         -- 7. Einstellungen (Spalten)
         local gbOpen = DL_ColSettings ~= nil and DL_ColSettings.guiBox ~= nil and DL_ColSettings.guiBox.show
         ixPos = drawPng("dl_png_einstellungen", "icon_einstellungen.dds", ixPos,
-            gbOpen and {0.2, 0.8, 1.0, 1.0} or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            gbOpen and DL_Colors.iconActive or nil,
+            DL_Colors.iconIdle,
             "dl_colSettings_", DL_t("tooltip_settings"))
 
-        -- Hintergrund-Transparenz Toggle (3 Stufen)
+        -- Hintergrund-Transparenz Toggle (4 Stufen: normal, hell, transparent, dunkel)
         local alphaIdx = box.ownTable.bgAlphaIdx or 1
-        local alphaCol = alphaIdx == 1 and {0.65,0.65,0.65,1} or alphaIdx == 2 and {0.9,0.7,0.2,1} or {0.4,0.4,0.4,0.5}
+        local alphaCol = alphaIdx == 1 and DL_Colors.iconIdle
+                      or alphaIdx == 2 and DL_Colors.gold
+                      or alphaIdx == 3 and {0.4,0.4,0.4,0.5}
+                      or DL_Colors.lagerBlau
         ixPos = drawPng("dl_png_bgalpha", "icon_sortierung.dds", ixPos,
             alphaIdx ~= 1 and alphaCol or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            DL_Colors.iconIdle,
             "dl_bgAlpha_", DL_t("tooltip_bgalpha"))
 
         -- CW only Toggle-Button (Stern-Icon)
         local zlActive = DispoList._zlFilterActive or false
         ixPos = drawPng("dl_png_zl_stern", "icon_zl_stern.dds", ixPos,
-            zlActive and {0.1, 1.0, 0.1, 1.0} or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            zlActive and DL_Colors.iconActiveGreen or nil,
+            DL_Colors.iconIdle,
             "dl_zlFilter_",
             DL_t("tooltip_cwonly"))
 
@@ -539,20 +545,29 @@ function DL_Display_DrawBox.setBox(args)
         -- uebernimmt den Leerzustand (Entscheidung 20.07.)
         local bmActive = DispoList.baustelleMode == true
         ixPos = drawPng("dl_png_baustelle", "icon_baustelle.dds", ixPos,
-            bmActive and {0.1, 1.0, 0.1, 1.0} or nil,
-            {0.65, 0.65, 0.65, 1.0},
+            bmActive and DL_Colors.iconActiveGreen or nil,
+            DL_Colors.iconIdle,
             "dl_baustelleMode_",
             DL_t("tooltip_baustellemode"))
 
+        -- Kassetten-Shops-Ansicht Toggle (Geldkassette). Aktiv-Farbe = Baustellen-
+        -- Orange (limitierte Annahme, kein echter Markt) statt Gruen.
+        local kmActive = DispoList.kassettenMode == true
+        ixPos = drawPng("dl_png_kassette", "icon_kassette.dds", ixPos,
+            kmActive and DL_Colors.bauLimit or nil,
+            DL_Colors.iconIdle,
+            "dl_kassettenMode_",
+            DL_t("tooltip_kassettenmode"))
+
         -- Trenner |
-        setTextColor(0.35, 0.35, 0.35, 1)
+        setTextColor(unpack(DL_Colors.trenner))
         local trenner = utf8Substr("|", 0)
         renderText(ixPos, iconPosY, size * 0.9, trenner)
         ixPos = ixPos + getTextWidth(size * 0.9, trenner) + difW
 
         -- Refresh-Icon (vorhanden) direkt vor dem Timer
         ixPos = drawPng("dl_png_refresh", "icon_refresh.dds", ixPos,
-            nil, {0.65, 0.65, 0.65, 1.0},
+            nil, DL_Colors.iconIdle,
             "dl_refresh_", DL_t("tooltip_refresh"))
 
         -- Refresh-Timer
@@ -575,7 +590,7 @@ function DL_Display_DrawBox.setBox(args)
                 local s = remainSec - m * 60
                 refreshStr = utf8Substr(m .. "m" .. string.format("%02d", s) .. "s", 0)
             end
-            setTextColor(0.75, 0.75, 0.75, 1)
+            setTextColor(unpack(DL_Colors.grauHell))
         end
         setTextBold(false)
         setTextAlignment(RenderText.ALIGN_LEFT)
@@ -595,18 +610,18 @@ function DL_Display_DrawBox.setBox(args)
 
         -- Titelzeile
         local titY = iconLineY - lineH * 1.15
-        setTextColor(0.95, 0.85, 0.1, 1); setTextBold(true)
+        setTextColor(unpack(DL_Colors.gold)); setTextBold(true)
         setTextAlignment(RenderText.ALIGN_LEFT)
         renderText(x + difW, titY, size * 1.25, utf8Substr(DL_t("baustelle_titel"), 0))
         setTextBold(false)
 
         -- Spaltenkoepfe (braucht / im Lager)
         local hY = titY - lineH * 1.0
-        setTextColor(0.75, 0.75, 0.75, 1)
+        setTextColor(unpack(DL_Colors.grauHell))
         setTextAlignment(RenderText.ALIGN_RIGHT)
         renderText(rBraucht, hY, size, utf8Substr(DL_t("spalte_braucht"), 0))
         renderText(rLager,   hY, size, utf8Substr(DL_t("spalte_imlager"), 0))
-        setTextColor(1, 1, 1, 1)
+        setTextColor(unpack(DL_Colors.white))
 
         local nextPosY   = hY - lineH * 0.8
         local scrollOffB = box.screen.bounds[1] or 1
@@ -614,9 +629,9 @@ function DL_Display_DrawBox.setBox(args)
 
         if #rows == 0 then
             setTextAlignment(RenderText.ALIGN_CENTER)
-            setTextColor(1, 0.85, 0, 1); setTextBold(false)
+            setTextColor(unpack(DL_Colors.gold)); setTextBold(false)
             renderText(x + w * 0.5, nextPosY, size * 0.95, utf8Substr(DL_t("baustelle_leer"), 0))
-            setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(1, 1, 1, 1)
+            setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(unpack(DL_Colors.white))
             return
         end
 
@@ -627,13 +642,13 @@ function DL_Display_DrawBox.setBox(args)
                     local bg = box.overlays.bgLine
                     if bg ~= nil then
                         g_currentMission.hlUtils.setOverlay(bg, x + difW, nextPosY + lineH * 0.85, w - difW * 2, box.screen.pixelH)
-                        g_currentMission.hlUtils.setBackgroundColor(bg, {0.95, 0.75, 0.1, 0.6})
+                        g_currentMission.hlUtils.setBackgroundColor(bg, {0.95, 0.85, 0.1, 0.6})
                         bg:render()
                     end
-                    setTextBold(true); setTextColor(0.95, 0.75, 0.1, 1)
+                    setTextBold(true); setTextColor(unpack(DL_Colors.gold))
                     setTextAlignment(RenderText.ALIGN_LEFT)
                     renderText(x + difW, nextPosY, size * 1.15, utf8Substr(r.name or "?", 0))
-                    setTextBold(false); setTextColor(1, 1, 1, 1)
+                    setTextBold(false); setTextColor(unpack(DL_Colors.white))
                     nextPosY = nextPosY - lineH
                     if nextPosY < y then break end
                 else
@@ -641,20 +656,20 @@ function DL_Display_DrawBox.setBox(args)
                     local isOpen = (r.ftName ~= nil and DispoList.baustelleViewFt == r.ftName)
                     -- Aufklapp-Markierung (kleines v) links vom Namen wenn offen
                     if isOpen then
-                        setTextColor(0.0, 0.85, 1.0, 1)
+                        setTextColor(unpack(DL_Colors.lagerBlau))
                         setTextAlignment(RenderText.ALIGN_LEFT)
                         renderText(x + difW * 0.7, nextPosY, size * 0.8, utf8Substr("v", 0))
                     end
                     setTextAlignment(RenderText.ALIGN_LEFT)
                     -- Warenname gruen sobald genug im Lager, sonst weiss (wie die Lager-Zahl)
-                    if enough then setTextColor(0.1, 1.0, 0.1, 1) else setTextColor(1, 1, 1, 1) end
+                    if enough then setTextColor(unpack(DL_Colors.gruen)) else setTextColor(unpack(DL_Colors.white)) end
                     renderText(nameX, nextPosY, size, utf8Substr(r.name or "?", 0))
                     setTextAlignment(RenderText.ALIGN_RIGHT)
-                    setTextColor(1.0, 0.80, 0.0, 1)
+                    setTextColor(unpack(DL_Colors.gold))
                     renderText(rBraucht, nextPosY, size, utf8Substr(fmtVol(r.needed or 0), 0))
                     setTextColor(enough and 0.1 or 0.95, enough and 1.0 or 0.55, 0.1, 1)
                     renderText(rLager, nextPosY, size, utf8Substr(fmtVol(r.stock or 0), 0))
-                    setTextColor(1, 1, 1, 1)
+                    setTextColor(unpack(DL_Colors.white))
                     -- Klick-Area ueber die ganze Materialzeile -> Lager auf/zuklappen
                     if r.ftName ~= nil and inArea and not g_currentMission.hlUtils:disableInArea() then
                         box:setClickArea({x, x + w, nextPosY - lineH * 0.1, nextPosY + lineH * 0.9,
@@ -666,52 +681,112 @@ function DL_Display_DrawBox.setBox(args)
 
                     -- Drill-Down: Lager-Zeilen wenn dieses Material aufgeklappt (wie Hauptliste)
                     if isOpen then
-                        local lager = DispoList.lagerCache[r.ftName] or {}
-                        if #lager == 0 then
-                            lineIdxB = lineIdxB + 1
-                            setTextAlignment(RenderText.ALIGN_LEFT)
-                            setTextColor(0.5, 0.5, 0.5, 1); setTextBold(false)
-                            renderText(nameX + difW * 2, nextPosY, size, utf8Substr(DL_t("hint_kein_lager"), 0))
-                            setTextColor(1, 1, 1, 1)
-                            nextPosY = nextPosY - lineH
-                            if nextPosY < y then break end
-                        else
-                            local maxNameW = 0
-                            for _, lag in ipairs(lager) do
-                                local tw = getTextWidth(size, utf8Substr((lag.name or "?") .. "  ", 0))
-                                if tw > maxNameW then maxNameW = tw end
-                            end
-                            local lagerNameX  = nameX + difW * 2
-                            local rightEdge   = rLager
-                            local lagerMengeX = math.min(lagerNameX + maxNameW + difW, rightEdge)
-                            local broke = false
-                            for _, lag in ipairs(lager) do
-                                lineIdxB = lineIdxB + 1
-                                setTextAlignment(RenderText.ALIGN_LEFT)
-                                -- Lager-Zeilen im gleichen Blau wie das Aufklapp-"v"
-                                setTextColor(0.0, 0.85, 1.0, 1); setTextBold(false)
-                                renderText(lagerNameX, nextPosY, size, utf8Substr(lag.name or "?", 0))
-                                setTextAlignment(RenderText.ALIGN_RIGHT)
-                                setTextColor(0.35, 0.72, 0.90, 1)
-                                local capTxt
-                                if lag.capacity ~= nil and lag.capacity > 0 then
-                                    capTxt = fmtVol(lag.level) .. " / " .. fmtVol(lag.capacity) .. " l"
-                                else
-                                    capTxt = fmtVol(lag.level) .. " l"
-                                end
-                                renderText(math.min(lagerMengeX + getTextWidth(size, utf8Substr(capTxt .. " ", 0)), rightEdge),
-                                    nextPosY, size, utf8Substr(capTxt, 0))
-                                setTextColor(1, 1, 1, 1)
-                                nextPosY = nextPosY - lineH
-                                if nextPosY < y then broke = true; break end
-                            end
-                            if broke then break end
-                        end
+                        local stop
+                        nextPosY, lineIdxB, stop = DL_Display_DrawBox.renderLagerRows(
+                            r.ftName, nextPosY, y, lineH, size, difW, nameX, rLager, lineIdxB, nil)
+                        if stop then break end
                     end
                 end
             end
         end
-        setTextBold(false); setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(1, 1, 1, 1)
+        setTextBold(false); setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(unpack(DL_Colors.white))
+        return
+    end
+
+    -- ══ KASSETTEN-SHOPS-ANSICHT (Geldkassette-Toggle) ═══════════════════════════
+    -- Produktionsstellen mit CASH-Output: pro Shop ein Block mit Status, darunter
+    -- die angenommenen Waren mit "passt noch rein" (freie Kapazitaet). Schlank wie
+    -- die Baustellen-Ansicht.
+    if DispoList.kassettenMode then
+        local rows   = DispoList.kassettenRows or {}
+        local numW   = getTextWidth(size, utf8Substr(fmtVol(9999999), 0)) + gap
+        local rFrei  = x + w - difW * 1.5
+        local rVerf  = rFrei - numW - gap
+        local nameX  = x + difW * 2.2
+
+        local titY = iconLineY - lineH * 1.15
+        setTextColor(unpack(DL_Colors.bauLimit)); setTextBold(true)
+        setTextAlignment(RenderText.ALIGN_LEFT)
+        renderText(x + difW, titY, size * 1.25, utf8Substr(DL_t("kassetten_titel"), 0))
+        setTextBold(false)
+
+        local hY = titY - lineH * 1.0
+        setTextColor(unpack(DL_Colors.grauHell))
+        setTextAlignment(RenderText.ALIGN_RIGHT)
+        renderText(rVerf, hY, size, utf8Substr(DL_t("kassetten_kopf_verf"), 0))
+        renderText(rFrei, hY, size, utf8Substr(DL_t("kassetten_kopf_frei"), 0))
+        setTextColor(unpack(DL_Colors.white))
+
+        local nextPosY = hY - lineH * 0.8
+        local scrollK  = box.screen.bounds[1] or 1
+        local lineIdxK = 0
+
+        if #rows == 0 then
+            setTextAlignment(RenderText.ALIGN_CENTER)
+            setTextColor(unpack(DL_Colors.bauLimit)); setTextBold(false)
+            renderText(x + w * 0.5, nextPosY, size * 0.95, utf8Substr(DL_t("kassetten_leer_hint"), 0))
+            setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(unpack(DL_Colors.white))
+            return
+        end
+
+        local function statusTxtCol(st)
+            if st == "leer" then return DL_t("kassetten_st_leer"), DL_Colors.rot end
+            if st == "voll" then return DL_t("kassetten_st_voll"), DL_Colors.bauLimit end
+            if st == "run"  then return DL_t("kassetten_st_run"),  DL_Colors.gruen end
+            return DL_t("kassetten_st_idle"), DL_Colors.grauMit
+        end
+
+        for _, r in ipairs(rows) do
+            lineIdxK = lineIdxK + 1
+            if lineIdxK >= scrollK and nextPosY >= y then
+                if r.kind == "shop" then
+                    local bg = box.overlays.bgLine
+                    if bg ~= nil then
+                        g_currentMission.hlUtils.setOverlay(bg, x + difW, nextPosY + lineH * 0.85, w - difW * 2, box.screen.pixelH)
+                        g_currentMission.hlUtils.setBackgroundColor(bg, {1.0, 0.55, 0.1, 0.55})
+                        bg:render()
+                    end
+                    setTextBold(true); setTextColor(unpack(DL_Colors.bauLimit))
+                    setTextAlignment(RenderText.ALIGN_LEFT)
+                    renderText(x + difW, nextPosY, size * 1.15, utf8Substr(r.name or "?", 0))
+                    -- Status rechts
+                    local stTxt, stCol = statusTxtCol(r.status)
+                    setTextAlignment(RenderText.ALIGN_RIGHT); setTextColor(unpack(stCol))
+                    renderText(rFrei, nextPosY, size * 0.95, utf8Substr(stTxt, 0))
+                    setTextBold(false); setTextColor(unpack(DL_Colors.white))
+                    nextPosY = nextPosY - lineH
+                    if nextPosY < y then break end
+                else
+                    -- Fuellstand-Ampel: leer (Bestand 0) = rot + oben (der "Eingang
+                    -- leer"-Ausloeser), fast leer (<25%) = orange, voll (nichts zu
+                    -- liefern) = grau, sonst weiss/gold. Zahl = zu liefern (bis voll).
+                    local isEmpty = (r.level ~= nil and r.level <= 0)
+                    local isLow   = (not isEmpty) and (r.frac ~= nil and r.frac < 0.25)
+                    local isFull  = (r.free or 0) <= 0
+                    local nameCol, numCol
+                    if isEmpty then       nameCol = DL_Colors.rot;      numCol = DL_Colors.rot
+                    elseif isLow then     nameCol = DL_Colors.bauLimit; numCol = DL_Colors.bauLimit
+                    elseif isFull then    nameCol = DL_Colors.grauMit;  numCol = DL_Colors.grauMit
+                    else                  nameCol = DL_Colors.white;    numCol = DL_Colors.gold end
+                    setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(unpack(nameCol))
+                    renderText(nameX, nextPosY, size, utf8Substr(r.name or "?", 0))
+                    setTextAlignment(RenderText.ALIGN_RIGHT)
+                    -- frei (Bestand - Fabrikpuffer ohne die Kassetten-Shops selbst):
+                    -- gruen wenn vorhanden, sonst grau -- es IST der Frei-Wert, darum
+                    -- gruen wie in der Hauptliste.
+                    setTextColor(unpack((r.avail or 0) > 0 and DL_Colors.gruen or DL_Colors.grauMit))
+                    renderText(rVerf, nextPosY, size, utf8Substr(fmtVol(r.avail or 0), 0))
+                    -- liefern (Tank-Platz) mit Fuellstand-Ampel
+                    setTextColor(unpack(numCol))
+                    local freeTxt = (r.free == math.huge) and "-" or fmtVol(r.free or 0)
+                    renderText(rFrei, nextPosY, size, utf8Substr(freeTxt, 0))
+                    setTextColor(unpack(DL_Colors.white))
+                    nextPosY = nextPosY - lineH
+                    if nextPosY < y then break end
+                end
+            end
+        end
+        setTextBold(false); setTextAlignment(RenderText.ALIGN_LEFT); setTextColor(unpack(DL_Colors.white))
         return
     end
 
@@ -765,15 +840,15 @@ function DL_Display_DrawBox.setBox(args)
     -- Delta-Meldungszeile
     if deltaMsg then
         setTextAlignment(RenderText.ALIGN_CENTER)
-        setTextColor(1, 0.85, 0, 1)
+        setTextColor(unpack(DL_Colors.gold))
         setTextBold(false)
         renderText(x + w * 0.5, deltaY, size * 0.85, utf8Substr(deltaMsg, 0))
         setTextAlignment(RenderText.ALIGN_LEFT)
-        setTextColor(1, 1, 1, 1)
+        setTextColor(unpack(DL_Colors.white))
     end
 
     -- Zeile 2: Obere Ueberschriften — DL_t("spalte_ware") in ALDI-Groesse + Frei-Erklaerung angehaengt
-    setTextColor(0.95, 0.85, 0.1, 1)
+    setTextColor(unpack(DL_Colors.gold))
     setTextBold(true)
     setTextAlignment(RenderText.ALIGN_LEFT)
     renderText(x + difW + iconW + difW, hdr1Y, size * 1.25, utf8Substr(DL_t("spalte_ware"), 0))
@@ -784,7 +859,7 @@ function DL_Display_DrawBox.setBox(args)
             setTextColor(0.55, 0.55, 0.55, 1)
             setTextBold(false)
             renderText(x + difW + iconW + difW, baustellenLabelY, size * 0.7, utf8Substr(DL_t("label_fabrikpuffer_baustelle"), 0))
-            setTextColor(1, 1, 1, 1)
+            setTextColor(unpack(DL_Colors.white))
         end
 
         local pufferH = math.floor((DispoList.reserveStunden or 24))
@@ -792,10 +867,10 @@ function DL_Display_DrawBox.setBox(args)
         if ecInstalled and DispoList.ecEnabled then
             freiInfo = freiInfo .. DL_t("freiinfo_ecsuffix")
         end
-        setTextColor(0.1, 1.0, 0.1, 1)
+        setTextColor(unpack(DL_Colors.gruen))
         setTextBold(false)
         renderText(x + difW + iconW + difW, freiInfoY, size * 0.85, utf8Substr(freiInfo, 0))
-        setTextColor(1, 1, 1, 1)
+        setTextColor(unpack(DL_Colors.white))
 
         -- Nur klickbar wenn EC installiert -- togglet DispoList.ecEnabled (1:1 Muster wie dl_zlFilter_)
         if ecInstalled and inArea and not g_currentMission.hlUtils:disableInArea() then
@@ -805,27 +880,27 @@ function DL_Display_DrawBox.setBox(args)
     end
 
     local vis = function(k) return DL_ColSettings == nil or DL_ColSettings:isVisible(k) end
-    setTextColor(0.75, 0.75, 0.75, 1)
+    setTextColor(unpack(DL_Colors.grauHell))
     setTextAlignment(RenderText.ALIGN_RIGHT)
     if vis("bestand")  then renderText(rBestand,  hdr1Y, size, utf8Substr(DL_t("spalte_bestand"), 0)) end
     if vis("frei")     then
-        setTextColor(0.1, 1.0, 0.1, 1)
+        setTextColor(unpack(DL_Colors.gruen))
         renderText(rVerkauf, hdr1Y, size, utf8Substr(DL_t("spalte_frei"), 0))
-        setTextColor(1, 1, 1, 1)
+        setTextColor(unpack(DL_Colors.white))
     end
     if vis("preis")    then renderText(rPreis,    hdr1Y, size, utf8Substr(DL_t("spalte_preis"), 0)) end
     if vis("maxPreis") then renderText(rMaxPreis, hdr1Y, size, utf8Substr("Max", 0)) end
     if vis("wert")     then renderText(rWert,     hdr1Y, size, utf8Substr(DL_t("spalte_wert"), 0)) end
     if vis("vkWert")   then
-        setTextColor(0.1, 1.0, 0.1, 1)
+        setTextColor(unpack(DL_Colors.gruen))
         renderText(rVkWert, hdr1Y, size, utf8Substr(DL_t("spalte_frei_wert"), 0))
-        setTextColor(0.75, 0.75, 0.75, 1)
+        setTextColor(unpack(DL_Colors.grauHell))
     end
     if vis("max")      then renderText(rMax,      hdr1Y, size, utf8Substr("Max", 0)) end
     if vis("vkMax")    then
-        setTextColor(0.1, 1.0, 0.1, 1)
+        setTextColor(unpack(DL_Colors.gruen))
         renderText(rVkMax, hdr1Y, size, utf8Substr(DL_t("spalte_frei_max"), 0))
-        setTextColor(0.75, 0.75, 0.75, 1)
+        setTextColor(unpack(DL_Colors.grauHell))
     end
     if vis("monat")    then renderText(rMonat,    hdr1Y, size, utf8Substr(DL_t("spalte_bester"), 0)) end
 
@@ -846,7 +921,7 @@ function DL_Display_DrawBox.setBox(args)
     if not DispoList.zlHinweisGesehen
        and DispoList.foundZentrallager ~= nil and DispoList.foundZentrallager == 0
        and #DispoList.DisplayItems < 10 then
-        setTextColor(1.0, 0.75, 0.0, 1)
+        setTextColor(unpack(DL_Colors.gold))
         setTextAlignment(RenderText.ALIGN_LEFT)
         renderText(x + difW, nextPosY, size * 0.9,
             utf8Substr("! Kein Zentrallager verfuegbar (Multiplayer)", 0))
@@ -882,13 +957,15 @@ function DL_Display_DrawBox.setBox(args)
                             g_currentMission.hlUtils.setOverlay(bgLine,
                                 x + difW, nextPosY + lineH * 0.85, w - difW * 2, box.screen.pixelH)
                             g_currentMission.hlUtils.setBackgroundColor(bgLine,
-                                {0.95, 0.75, 0.1, 0.6})
+                                {0.95, 0.85, 0.1, 0.6})
                             bgLine:render()
                         end
-                        -- Stationsname fett gelb, größer
+                        -- Stationsname fett, größer. Baustelle/Lager-Station (limitierte
+                        -- Annahme, kein echter Markt) -> orange statt gold (Filter A+).
                         local bigSize = size * 1.15
+                        local isLimited = DispoList.stationLimited ~= nil and DispoList.stationLimited[stName] == true
                         setTextBold(true)
-                        setTextColor(0.95, 0.75, 0.1, 1)
+                        setTextColor(unpack(isLimited and DL_Colors.bauLimit or DL_Colors.gold))
                         setTextAlignment(RenderText.ALIGN_LEFT)
                         renderText(x + difW, nextPosY, bigSize, utf8Substr(stName, 0))
                         setTextBold(false)
@@ -903,7 +980,7 @@ function DL_Display_DrawBox.setBox(args)
                             if lineIdx >= scrollOffset and nextPosY >= y then
                                 local valTxt = utf8Substr(DL_t("filter_gesamtwert") .. " " .. fmtMon(stVal) .. " €", 0)
                                 setTextBold(true)
-                                setTextColor(0.1, 1.0, 0.1, 1)
+                                setTextColor(unpack(DL_Colors.gruen))
                                 setTextAlignment(RenderText.ALIGN_LEFT)
                                 renderText(x + difW, nextPosY, bigSize, valTxt)
                                 setTextBold(false)
@@ -922,7 +999,7 @@ function DL_Display_DrawBox.setBox(args)
                     lineIdx = lineIdx + 1
                     if lineIdx >= scrollOffset and nextPosY >= y then
                         setTextBold(false)
-                        setTextColor(0.1, 1.0, 0.1, 1)
+                        setTextColor(unpack(DL_Colors.gruen))
                         setTextAlignment(RenderText.ALIGN_LEFT)
                         renderText(x + difW * 3, nextPosY, size * 0.9, utf8Substr(DL_bereichLabel(brName), 0))
                         nextPosY = nextPosY - lineH
@@ -942,25 +1019,30 @@ function DL_Display_DrawBox.setBox(args)
                     if (e.bestMonth or 0) == curM then
                         setTextColor(0.0, 1.0, 1.0, 1)
                     else
-                        setTextColor(1, 1, 1, 1)
+                        setTextColor(unpack(DL_Colors.white))
                     end
                     setTextAlignment(RenderText.ALIGN_LEFT)
                     renderText(colWareX, nextPosY, size, utf8Substr(e.title or "", 0))
 
                     local stockLvl = e.stockLevel or 0
                     local sellable = math.max(0, e.sellable or 0)
+                    -- Mengen-Deckel (Filter A+): an einer Baustelle/Lager-Station laesst sich
+                    -- nur bis zur freien Kapazitaet abladen -> Frei/Frei-Wert entsprechend
+                    -- deckeln. Echte Maerkte liefern huge -> unveraendert.
+                    local eFreeCap = e.freeCap or math.huge
+                    if eFreeCap < sellable then sellable = eFreeCap end
                     local price    = e.price    or 0
                     local maxPrice = e.maxPrice or 0
                     local vis = function(k) return DL_ColSettings == nil or DL_ColSettings:isVisible(k) end
 
                     setTextAlignment(RenderText.ALIGN_RIGHT)
                     if vis("bestand") then
-                        setTextColor(0.70, 0.70, 0.70, 1)
+                        setTextColor(unpack(DL_Colors.grau))
                         renderText(rBestand, nextPosY, size, utf8Substr(fmtVol(stockLvl), 0))
                     end
                     if vis("frei") then
                         local hasSell = sellable > 0
-                        setTextColor(hasSell and 0.1 or 1.0, hasSell and 1.0 or 0.1, 0.1, 1)
+                        setTextColor(unpack(hasSell and DL_Colors.gruen or DL_Colors.rot))
                         renderText(rVerkauf, nextPosY, size, utf8Substr(fmtVol(sellable), 0))
                     end
                     if vis("preis") then
@@ -969,29 +1051,29 @@ function DL_Display_DrawBox.setBox(args)
                             utf8Substr(g_i18n:formatMoney(math.floor(price * 1000), 0, false) .. " €", 0))
                     end
                     if vis("maxPreis") then
-                        setTextColor(1.0, 0.80, 0.0, 1)
+                        setTextColor(unpack(DL_Colors.gold))
                         renderText(rMaxPreis, nextPosY, size,
                             utf8Substr(g_i18n:formatMoney(math.floor(maxPrice * 1000), 0, false) .. " €", 0))
                     end
                     if vis("wert") then
-                        setTextColor(0.70, 0.70, 0.70, 1)
+                        setTextColor(unpack(DL_Colors.grau))
                         renderText(rWert, nextPosY, size,
                             utf8Substr(fmtMon(stockLvl * price) .. " €", 0))
                     end
                     if vis("vkWert") then
                         local vkWert = sellable * price
-                        setTextColor(vkWert > 0 and 0.1 or 1.0, vkWert > 0 and 1.0 or 0.1, 0.1, 1)
+                        setTextColor(unpack(vkWert > 0 and DL_Colors.gruen or DL_Colors.rot))
                         renderText(rVkWert, nextPosY, size,
                             utf8Substr(fmtMon(vkWert) .. " €", 0))
                     end
                     if vis("max") then
-                        setTextColor(0.70, 0.70, 0.70, 1)
+                        setTextColor(unpack(DL_Colors.grau))
                         renderText(rMax, nextPosY, size,
                             utf8Substr(fmtMon(stockLvl * maxPrice) .. " €", 0))
                     end
                     if vis("vkMax") then
                         local vkMax = sellable * maxPrice
-                        setTextColor(vkMax > 0 and 0.1 or 1.0, vkMax > 0 and 1.0 or 0.1, 0.1, 1)
+                        setTextColor(unpack(vkMax > 0 and DL_Colors.gruen or DL_Colors.rot))
                         renderText(rVkMax, nextPosY, size,
                             utf8Substr(fmtMon(vkMax) .. " €", 0))
                     end
@@ -1000,7 +1082,7 @@ function DL_Display_DrawBox.setBox(args)
                         if bestM == curM then
                             setTextColor(0.0, 1.0, 1.0, 1); setTextBold(true)
                         else
-                            setTextColor(0.65, 0.65, 0.65, 1); setTextBold(false)
+                            setTextColor(unpack(DL_Colors.grau65)); setTextBold(false)
                         end
                         renderText(rMonat, nextPosY, size, utf8Substr(g_i18n:formatPeriod(bestM, true), 0))
                         setTextBold(false)
@@ -1012,7 +1094,7 @@ function DL_Display_DrawBox.setBox(args)
                         local isOpen = DispoList.lagerViewFt == ftName
                         if isOpen then
                             -- Markierung: kleines v vor dem Warennamen
-                            setTextColor(0.0, 0.85, 1.0, 1)
+                            setTextColor(unpack(DL_Colors.lagerBlau))
                             setTextAlignment(RenderText.ALIGN_LEFT)
                             renderText(x + difW * 0.5, nextPosY, size * 0.8, utf8Substr("v", 0))
                         end
@@ -1025,51 +1107,10 @@ function DL_Display_DrawBox.setBox(args)
 
                     -- Drill-Down: Lager-Zeilen wenn diese Ware aufgeklappt
                     if ftName ~= nil and DispoList.lagerViewFt == ftName then
-                        local lager = DispoList.lagerCache[ftName] or {}
-                        if #lager == 0 then
-                            lineIdx = lineIdx + 1
-                            if lineIdx >= scrollOffset and nextPosY >= y then
-                                setTextAlignment(RenderText.ALIGN_LEFT)
-                                setTextColor(0.5, 0.5, 0.5, 1)
-                                setTextBold(false)
-                                renderText(colWareX + difW * 2, nextPosY, size,
-                                    utf8Substr(DL_t("hint_kein_lager"), 0))
-                                nextPosY = nextPosY - lineH
-                                if nextPosY < y then break end
-                            end
-                        else
-                            -- Dynamische Spaltenbreite: max. Namenlaenge bestimmen
-                            local maxNameW = 0
-                            for _, lag in ipairs(lager) do
-                                local tw = getTextWidth(size, utf8Substr((lag.name or "?") .. "  ", 0))
-                                if tw > maxNameW then maxNameW = tw end
-                            end
-                            local lagerNameX  = colWareX + difW * 2
-                            local lagerMengeX = math.min(lagerNameX + maxNameW + difW, rightEdge)
-                            for _, lag in ipairs(lager) do
-                                lineIdx = lineIdx + 1
-                                if lineIdx >= scrollOffset and nextPosY >= y then
-                                    setTextAlignment(RenderText.ALIGN_LEFT)
-                                    -- Lager-Zeilen im gleichen Blau wie das Aufklapp-"v" (bessere Sichtbarkeit)
-                                    setTextColor(0.0, 0.85, 1.0, 1)
-                                    setTextBold(false)
-                                    renderText(lagerNameX, nextPosY, size,
-                                        utf8Substr(lag.name or "?", 0))
-                                    setTextAlignment(RenderText.ALIGN_RIGHT)
-                                    setTextColor(0.35, 0.72, 0.90, 1)
-                                    local capTxt
-                                    if lag.capacity ~= nil and lag.capacity > 0 then
-                                        capTxt = fmtVol(lag.level) .. " / " .. fmtVol(lag.capacity) .. " l"
-                                    else
-                                        capTxt = fmtVol(lag.level) .. " l"
-                                    end
-                                    renderText(math.min(lagerMengeX + getTextWidth(size, utf8Substr(capTxt .. " ", 0)), rightEdge),
-                                        nextPosY, size, utf8Substr(capTxt, 0))
-                                    nextPosY = nextPosY - lineH
-                                    if nextPosY < y then break end
-                                end
-                            end
-                        end
+                        local stop
+                        nextPosY, lineIdx, stop = DL_Display_DrawBox.renderLagerRows(
+                            ftName, nextPosY, y, lineH, size, difW, colWareX, rightEdge, lineIdx, scrollOffset)
+                        if stop then break end
                     end
                 end -- Waren-Eintrag
             end
@@ -1077,6 +1118,6 @@ function DL_Display_DrawBox.setBox(args)
     end
 
     setTextAlignment(RenderText.ALIGN_LEFT)
-    setTextColor(1, 1, 1, 1)
+    setTextColor(unpack(DL_Colors.white))
     setTextBold(false)
 end
