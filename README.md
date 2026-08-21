@@ -4,6 +4,8 @@
 </p>
 **🇩🇪 [Deutsch](#deutsch)** | **🇬🇧 [English](#english)** | **🇫🇷 [Français](#français)** | **🇮🇹 [Italiano](#italiano)** | **🇵🇹 [Português](#português)** | **🇪🇸 [Español](#español)**
 
+> ⭐ **Gefällt dir DispoList? Lass oben rechts einen Stern da** — ein Klick, und andere finden den Mod leichter. · **Like it? Leave a star (top right)** — one click helps others discover the mod.
+
 ---
 
 ## 🇩🇪 Deutsch <a name="deutsch"></a>
@@ -104,7 +106,7 @@ Ein Klick auf das **Einstellungen-Icon** in der Icon-Leiste öffnet das Einstell
 
 ### Multiplayer
 
-Grundsätzlich MP-fähig — jeder Spieler benötigt den Mod. **Nicht offiziell getestet**, Nutzung auf eigene Gefahr.
+Jeder Spieler benötigt den Mod. Die Zusatzabnahme verändert und synchronisiert Spielstand-Daten (kein reiner Anzeige-Mod mehr) und ist im Coop noch nicht mit zwei Spielern getestet — Nutzung im Multiplayer auf eigene Gefahr; Rückmeldungen von Tests sind willkommen.
 
 ### Credits
 
@@ -212,7 +214,7 @@ Clicking the **settings icon** in the icon bar opens the settings menu — every
 
 ### Multiplayer
 
-Generally MP-capable — each player needs the mod. **Not officially tested**, use at your own risk.
+Each player needs the mod installed. The extra-offtake feature changes and syncs savegame data (this is no longer a pure display mod) and has not yet been tested with two players in co-op — multiplayer use at your own risk; feedback from tests is welcome.
 
 ### Credits
 
@@ -316,7 +318,7 @@ Un clic sur l'**icône des paramètres** dans la barre d'icônes ouvre le menu d
 
 ### Multijoueur
 
-Compatible multijoueur en principe — chaque joueur a besoin du mod. **Non testé officiellement**, utilisation à vos propres risques.
+Chaque joueur a besoin du mod. La vente supplémentaire modifie et synchronise des données de sauvegarde (ce n'est plus un simple mod d'affichage) et n'a pas encore été testée à deux en coop — utilisation en multijoueur à vos risques ; vos retours de tests sont les bienvenus.
 
 ### Crédits
 
@@ -420,7 +422,7 @@ Un clic sull'**icona impostazioni** nella barra delle icone apre il menu imposta
 
 ### Multigiocatore
 
-In linea di principio compatibile MP — ogni giocatore ha bisogno del mod. **Non testato ufficialmente**, uso a proprio rischio.
+Ogni giocatore ha bisogno del mod. La vendita aggiuntiva modifica e sincronizza dati del salvataggio (non è più un semplice mod di visualizzazione) e non è ancora stata testata in due in co-op — uso in multiplayer a proprio rischio; i feedback dai test sono benvenuti.
 
 ### Crediti
 
@@ -524,7 +526,7 @@ Um clique no **ícone de definições** na barra de ícones abre o menu de defin
 
 ### Multijogador
 
-Em princípio compatível com MP — cada jogador precisa do mod. **Não testado oficialmente**, use por sua conta e risco.
+Cada jogador precisa do mod. A venda adicional altera e sincroniza dados do savegame (já não é um mod só de exibição) e ainda não foi testada com dois jogadores em co-op — uso em multijogador por sua conta e risco; feedback dos testes é bem-vindo.
 
 ### Créditos
 
@@ -628,7 +630,7 @@ Un clic en el **icono de ajustes** en la barra de iconos abre el menú de ajuste
 
 ### Multijugador
 
-En principio compatible con MP — cada jugador necesita el mod. **No probado oficialmente**, úsalo bajo tu propia responsabilidad.
+Cada jugador necesita el mod. La venta adicional modifica y sincroniza datos de la partida (ya no es un mod solo de visualización) y aún no se ha probado con dos jugadores en cooperativo — uso en multijugador bajo su propio riesgo; se agradecen los comentarios de las pruebas.
 
 ### Créditos
 
@@ -641,6 +643,22 @@ En principio compatible con MP — cada jugador necesita el mod. **No probado of
 *Built with ❤️ for the FS25 community*
 
 ## Changelog
+
+### v1.4.0.0
+
+**DE**
+- Neue Ansicht „Geldkassetten-Shops" (Bargeld-Verkaufsstellen wie Hofladen, Eisdiele, Fischbude): zeigt je Ware, wieviel noch reinpasst und wieviel du frei hast; leere Eingänge stehen oben und sind farblich hervorgehoben. Es werden nur aktive Rezepte und nur wirklich lieferbare Waren gelistet.
+- Zusatzabnahme erweitert: jetzt lassen sich auch ab-Werk-/Paletten-Waren freischalten (z.B. Siliermittel).
+- Genauere Bestbieter-Anzeige: Verkaufsstellen mit begrenztem Lager (z.B. Baustellen/Konstruktionen) werden jetzt korrekt behandelt; die angezeigte „freie" Menge richtet sich nach der noch freien Kapazität der Station, solche Stellen sind orange markiert.
+- Neuer „akzeptiert/gesamt"-Zähler im Stationen-Reiter, zusätzliche dunklere Transparenzstufe für das Fenster.
+- Absturz-/Stabilitätsfix und diverser Feinschliff.
+
+**EN**
+- New "Cash-box shops" view (cash sell points like farm shop, ice-cream parlor, fish stall): shows for each good how much still fits and how much you have free; empty inputs are sorted to the top and highlighted. Only active recipes and only goods you can actually deliver are listed.
+- Extra offtake extended: factory/pallet goods can now also be unlocked (e.g. silage additive).
+- More accurate best-buyer display: sell points with limited storage (e.g. construction sites) are now handled correctly; the displayed "free" amount follows the station's remaining capacity, and such points are marked orange.
+- New "accepted/total" counter in the Stations tab, plus an extra darker transparency stage for the window.
+- Crash/stability fix and various polish.
 
 ### v1.3.0.0
 **DE:** Neuer Reiter „Zusatzabnahme" — eigene Verkaufsstationen fuer zusaetzliche Waren freischalten (nach Bereich gruppiert, mit einstellbarem Preisfaktor, im Savegame gespeichert). Neue Baustellen-Ansicht mit offenem Materialbedarf je Baustelle und Lager-Aufklappung pro Material. Ueberarbeitete Suche: Fahren wird beim Tippen gesperrt, Enter oder ein Klick woanders bestaetigt. Neues HUD-Icon. Aktualisiert fuer die laufende FS25-Version. Der Mehrspieler-Abgleich der Zusatzabnahme ist implementiert, im Coop aber noch nicht final getestet.
