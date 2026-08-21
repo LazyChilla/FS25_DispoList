@@ -166,6 +166,32 @@ function SU.onSaveSavegame()
 end
 
 -- ---------------------------------------------------------------------
+--  Native-Snapshot je Station (VOR dem ersten Deal): Preis-Akzeptanz +
+--  Trigger-Zustand. Basis fuer korrektes "ab Werk" UND sicheres Entfernen
+--  (native Annahme wird beim Deal-Entfernen exakt wiederhergestellt, nie
+--  zerschossen). Keyed am Station-Objekt (Session-stabil).
+-- ---------------------------------------------------------------------
+SU.nativeSnap = SU.nativeSnap or {}
+function SU.snapshotNative(station)
+	if station == nil or SU.nativeSnap[station] ~= nil then return end
+	local acc = {}
+	if station.acceptedFillTypes ~= nil then
+		for k, v in pairs(station.acceptedFillTypes) do if v == true then acc[k] = true end end
+	end
+	local trig = {}
+	if station.unloadTriggers ~= nil then
+		for ti, tr in ipairs(station.unloadTriggers) do
+			local s = {}
+			if tr.fillTypes ~= nil then
+				for k, v in pairs(tr.fillTypes) do if v == true then s[k] = true end end
+			end
+			trig[ti] = s
+		end
+	end
+	SU.nativeSnap[station] = { acc = acc, trig = trig }
+end
+
+-- ---------------------------------------------------------------------
 --  Deal auf eine Station anwenden (Verkaufsseite + Trigger-Seite)
 -- ---------------------------------------------------------------------
 function SU.applyDealToStation(station, deal)
@@ -177,6 +203,7 @@ function SU.applyDealToStation(station, deal)
 	if fillType == nil then
 		return false
 	end
+	SU.snapshotNative(station)   -- native Basis EINMALIG festhalten, VOR dem Schreiben
 	local scale = deal.priceScale or 1
 	local price = fillType.pricePerLiter * scale
 	if price <= 0 then
@@ -298,8 +325,17 @@ function SU.guiToggle(stationName, ftName)
 		local station = SU.findStationByExactName(stationName)
 		local idx = g_fillTypeManager:getFillTypeIndexByName(ftUpper)
 		if station ~= nil and idx ~= nil and station.unloadTriggers ~= nil then
-			for _, trigger in ipairs(station.unloadTriggers) do
-				if trigger.fillTypes ~= nil then trigger.fillTypes[idx] = nil end
+			-- Auf nativen Ur-Zustand zuruecksetzen: war die Ware nativ in einem
+			-- Trigger, bleibt sie dort; nur die zusaetzlich freigeschalteten
+			-- Trigger (z.B. Palette) fallen weg. Ohne Snapshot (reiner Zusatz-
+			-- Deal) -> aus allen Triggern raus (wie bisher).
+			local snap = SU.nativeSnap ~= nil and SU.nativeSnap[station] or nil
+			for ti, trigger in ipairs(station.unloadTriggers) do
+				if trigger.fillTypes ~= nil then
+					local nativeHad = snap ~= nil and snap.trig ~= nil
+						and snap.trig[ti] ~= nil and snap.trig[ti][idx] == true
+					trigger.fillTypes[idx] = nativeHad and true or nil
+				end
 			end
 		end
 		toLog("GUI: Deal entfernt '%s' <- %s", stationName, ftUpper)
@@ -477,6 +513,207 @@ function SU:dlspDebug()
 	return table.concat(lines, "\n")
 end
 
+-- Diagnose: pro Ware akzeptiert(Preis)? / supported? / in wie vielen Triggern?
+-- Deckt den Fall auf "zeigt kaufbar (acceptedFillTypes), laedt aber nicht ab
+-- (kein unloadTrigger)". Reiner Lese-Dump, aendert nichts.
+function SU:dlspDiag(namePart, ftName)
+	if namePart == nil then
+		return "Nutzung: dlspDiag <Station-Teil> [FillType]  -- akzeptiert/supported/#Trigger je Ware"
+	end
+	local station = SU.findStation(namePart)
+	if station == nil then
+		return "Keine Station gefunden, die '" .. tostring(namePart) .. "' enthaelt."
+	end
+	local acc      = station.acceptedFillTypes or {}
+	local sup      = station.supportedFillTypes or {}
+	local triggers = station.unloadTriggers or {}
+	local function trgCount(idx)
+		local c = 0
+		for _, t in ipairs(triggers) do
+			if t.fillTypes ~= nil and t.fillTypes[idx] == true then c = c + 1 end
+		end
+		return c
+	end
+	local nAcc, nSup = 0, 0
+	for _, v in pairs(acc) do if v == true then nAcc = nAcc + 1 end end
+	for _, v in pairs(sup) do if v == true then nSup = nSup + 1 end end
+	local lines = {
+		string.format("=== Diagnose '%s' ===", tostring(station:getName())),
+		string.format("acceptedFillTypes=%d  supportedFillTypes=%d  unloadTriggers=%d", nAcc, nSup, #triggers),
+		"A=akzeptiert(Preis)  S=supported  T=#Trigger mit der Ware",
+	}
+	-- Einzelne Ware abfragen (z.B. dlspDiag Messe SILAGE_ADDITIVE)
+	if ftName ~= nil then
+		local idx = g_fillTypeManager:getFillTypeIndexByName(string.upper(ftName))
+		if idx == nil then
+			table.insert(lines, "FillType '" .. tostring(ftName) .. "' unbekannt.")
+		else
+			table.insert(lines, string.format("  %s : A=%s  S=%s  T=%d",
+				string.upper(ftName), tostring(acc[idx] == true), tostring(sup[idx] == true), trgCount(idx)))
+		end
+		return table.concat(lines, "\n")
+	end
+	-- Alle akzeptierten Waren; Mismatch (akzeptiert aber 0 Trigger) zuoberst
+	local rows = {}
+	for idx, isOk in pairs(acc) do
+		if isOk == true then
+			local def = g_fillTypeManager:getFillTypeByIndex(idx)
+			local nm  = (def ~= nil and def.name) or tostring(idx)
+			local tc  = trgCount(idx)
+			rows[#rows + 1] = { nm = nm, s = (sup[idx] == true), t = tc, bad = (tc == 0) }
+		end
+	end
+	table.sort(rows, function(a, b)
+		if a.bad ~= b.bad then return a.bad end
+		return a.nm < b.nm
+	end)
+	local nBad = 0
+	for _, r in ipairs(rows) do
+		if r.bad then nBad = nBad + 1 end
+		table.insert(lines, string.format("  %-22s A=1 S=%s T=%d%s",
+			r.nm, r.s and "1" or "0", r.t, r.bad and "   <-- KEIN TRIGGER (zeigt kaufbar, laedt NICHT ab)" or ""))
+	end
+	table.insert(lines, string.format("--- %d akzeptiert, davon %d OHNE Trigger ---", #rows, nBad))
+	return table.concat(lines, "\n")
+end
+
+-- Diagnose der freien Kapazitaet je akzeptierter Ware (fuer die Spielplatz-/
+-- Baustellen-Falschdaten). Zeigt: Preis, getFreeCapacity (0 = Lager voll ->
+-- kann NICHT mehr abgeladen werden), ob die Station ein natives Constructible
+-- ist, und die bereits gelieferte Menge. Rein lesend.
+function SU:dlspFreeCap(namePart)
+	if namePart == nil then
+		return "Nutzung: dlspFreeCap <Station-Teil>  -- freie Kapazitaet je Ware (0 = voll)"
+	end
+	local station = SU.findStation(namePart)
+	if station == nil then
+		return "Keine Station gefunden, die '" .. tostring(namePart) .. "' enthaelt."
+	end
+	local myFarmId = (g_currentMission ~= nil and g_currentMission.getFarmId ~= nil)
+		and g_currentMission:getFarmId() or 1
+	local placeable = station.owningPlaceable
+	local isConstr  = placeable ~= nil and placeable.spec_constructible ~= nil
+	local stateInfo = ""
+	if isConstr then
+		local ok, fin, tot = pcall(function()
+			return placeable:getNumFinishedConstructibleStates()
+		end)
+		if ok then stateInfo = string.format("  Bauzustand=%s/%s", tostring(fin), tostring(tot)) end
+	end
+	local lines = {
+		string.format("=== FreeCap '%s' ===", tostring(station:getName())),
+		string.format("Constructible=%s%s  farmId=%d", tostring(isConstr), stateInfo, myFarmId),
+		"Ware : Preis | freieKap (0=voll, huge=Markt) | geliefert(Constructible)",
+	}
+	local rows = {}
+	for idx, isOk in pairs(station.acceptedFillTypes or {}) do
+		if isOk == true then
+			local def = g_fillTypeManager:getFillTypeByIndex(idx)
+			local nm  = (def ~= nil and def.name) or tostring(idx)
+			local price = 0
+			local okP, p = pcall(function() return station:getEffectiveFillTypePrice(idx) end)
+			if okP and p ~= nil then price = p end
+			local free = -1
+			local okF, f = pcall(function() return station:getFreeCapacity(idx, myFarmId) end)
+			if okF and f ~= nil then free = f end
+			local deliv = nil
+			if isConstr then
+				local okD, d = pcall(function() return placeable:getConstructibleFillLevel(idx) end)
+				if okD then deliv = d end
+			end
+			rows[#rows + 1] = { nm = nm, price = price, free = free, deliv = deliv }
+		end
+	end
+	table.sort(rows, function(a, b) return a.free < b.free end)
+	for _, r in ipairs(rows) do
+		local freeStr = (r.free == math.huge) and "huge" or string.format("%.0f", r.free)
+		local delivStr = (r.deliv ~= nil) and string.format(" | geliefert=%.0f", r.deliv) or ""
+		local flag = (r.free == 0) and "   <-- VOLL (kann nicht mehr rein)" or ""
+		table.insert(lines, string.format("  %-20s Preis=%.0f | freieKap=%s%s%s",
+			r.nm, r.price, freeStr, delivStr, flag))
+	end
+	table.insert(lines, string.format("--- %d akzeptierte Waren ---", #rows))
+	return table.concat(lines, "\n")
+end
+
+-- Diagnose der Produktionsstellen (Fenster/Hofmarkt/Eisdiele ...): pro Punkt die
+-- Eingangswaren (+ freie Kapazitaet) und die Produktions-OUTPUTS mit Modus
+-- (directSell = Geld direkt / PALETTE = spawnt Palette, z.B. Bargeld-Kassette /
+-- autoDeliver / keep). So sehen wir, welche Punkte wirklich Geld/Kassetten
+-- ausgeben und wie man sie erkennt. Rein lesend.
+function SU:dlspProd(namePart)
+	local mission = g_currentMission
+	if mission == nil then return "Keine Mission." end
+	local farmId = (mission.getFarmId ~= nil) and mission:getFarmId() or 1
+
+	-- Produktionsstellen sammeln (primaer productionChainManager, Fallback ueber
+	-- die Verkaufsstationen -> owningPlaceable.spec_productionPoint).
+	local seen, pps = {}, {}
+	local pcm = mission.productionChainManager
+	if pcm ~= nil and pcm.productionPoints ~= nil then
+		for _, pp in ipairs(pcm.productionPoints) do
+			if pp ~= nil and not seen[pp] then seen[pp] = true; pps[#pps + 1] = pp end
+		end
+	end
+	if mission.storageSystem ~= nil then
+		for _, st in pairs(mission.storageSystem:getUnloadingStations()) do
+			local pl   = st.owningPlaceable
+			local spec = pl ~= nil and pl.spec_productionPoint or nil
+			local pp   = spec ~= nil and spec.productionPoint or nil
+			if pp ~= nil and not seen[pp] then seen[pp] = true; pps[#pps + 1] = pp end
+		end
+	end
+
+	local function ftName(idx)
+		local ft = g_fillTypeManager:getFillTypeByIndex(idx)
+		return (ft ~= nil and ft.name) or tostring(idx)
+	end
+	local function outMode(pp, idx)
+		if pp.outputFillTypeIdsDirectSell   and pp.outputFillTypeIdsDirectSell[idx]   then return "directSell(Geld)" end
+		if pp.outputFillTypeIdsToPallets    and pp.outputFillTypeIdsToPallets[idx]    then return "PALETTE" end
+		if pp.outputFillTypeIdsAutoDeliver  and pp.outputFillTypeIdsAutoDeliver[idx]  then return "autoDeliver" end
+		return "keep(Lager)"
+	end
+
+	local lines = { string.format("=== Produktionsstellen (%d) ===", #pps) }
+	for _, pp in ipairs(pps) do
+		local nm    = (pp.getName ~= nil) and tostring(pp:getName()) or "?"
+		if namePart == nil or string.find(string.lower(nm), string.lower(namePart), 1, true) ~= nil then
+			local owner = pp.ownerFarmId or 0
+			table.insert(lines, string.format("PP '%s'  F%s", nm, tostring(owner)))
+			-- Eingangswaren (aus den Produktions-Inputs, dedupliziert) + freie Kap
+			local inSeen = {}
+			for _, prod in ipairs(pp.productions or {}) do
+				for _, inp in ipairs(prod.inputs or {}) do
+					local idx = inp.type
+					if idx ~= nil and not inSeen[idx] then
+						inSeen[idx] = true
+						local free = "?"
+						if pp.unloadingStation ~= nil then
+							local okF, f = pcall(pp.unloadingStation.getFreeCapacity, pp.unloadingStation, idx, farmId)
+							if okF and f ~= nil then free = (f == math.huge) and "huge" or string.format("%.0f", f) end
+						end
+						table.insert(lines, string.format("   IN  %-20s freieKap=%s", ftName(idx), free))
+					end
+				end
+			end
+			-- Outputs mit Modus (PALETTE = Bargeld-Kassette-Kandidat)
+			local outSeen = {}
+			for _, prod in ipairs(pp.productions or {}) do
+				for _, outp in ipairs(prod.outputs or {}) do
+					local idx = outp.type
+					if idx ~= nil and not outSeen[idx] then
+						outSeen[idx] = true
+						table.insert(lines, string.format("   OUT %-20s %s", ftName(idx), outMode(pp, idx)))
+					end
+				end
+			end
+		end
+	end
+	if #lines == 1 then table.insert(lines, "(keine passende Produktionsstelle gefunden)") end
+	return table.concat(lines, "\n")
+end
+
 -- ---------------------------------------------------------------------
 --  Registrierung / Lebenszyklus
 -- ---------------------------------------------------------------------
@@ -490,6 +727,9 @@ function SU.registerCommands()
 	addConsoleCommand("dlspClear",    "dlspClear [Station-Teil] -- Deals loeschen (leer = alle)",                                 "dlspClear",    SU)
 	addConsoleCommand("dlspStations", "Listet alle Verkaufsstationen (zum Namen finden)",                                         "dlspStations", SU)
 	addConsoleCommand("dlspInfo",     "dlspInfo <Station-Teil> -- zeigt angenommene Waren + Preis",                               "dlspInfo",     SU)
+	addConsoleCommand("dlspDiag",     "dlspDiag <Station-Teil> [FillType] -- akzeptiert/supported/#Trigger je Ware (Mismatch)",  "dlspDiag",     SU)
+	addConsoleCommand("dlspFreeCap",  "dlspFreeCap <Station-Teil> -- freie Kapazitaet je Ware (0 = Lager voll)",                  "dlspFreeCap",  SU)
+	addConsoleCommand("dlspProd",     "dlspProd [Name-Teil] -- Produktionsstellen: Eingang(+Kap) + Output-Modus (PALETTE=Kassette)", "dlspProd",  SU)
 	addConsoleCommand("dlspDebug",    "Diagnose (Pfad, Datei, Deals)",                                                            "dlspDebug",    SU)
 end
 
