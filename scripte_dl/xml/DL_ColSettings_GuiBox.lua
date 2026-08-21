@@ -242,6 +242,7 @@ function DL_ColSettings:createGuiBox()
         local function applyPreset(applyFn, presetKey)
             local function doApply()
                 applyFn()
+                if DL_FilterMenu_Draw ~= nil then DL_FilterMenu_Draw.invalidateBereicheCache() end  -- Preset baut Bereiche neu
                 DL_Filter.presetDialogShown = true
                 DL_Filter.userPersonalized  = false
                 DL_Filter.activePreset      = presetKey or ""

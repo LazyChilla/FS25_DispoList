@@ -47,19 +47,7 @@ function DL_Display_XmlBox:loadBox(name, onSave)
                     DispoList.filterMenuOpen = false
                     if DispoList.resetSearch ~= nil then DispoList.resetSearch() end
                     -- Pause aufheben falls aktiv
-                    if DispoList.filterPauseEnabled then
-                        if DispoList.previousTimeScale ~= nil then
-                            g_currentMission.timeScale = DispoList.previousTimeScale
-                        end
-                        if g_currentMission.missionInfo ~= nil and DispoList.previousMissionTimeScale ~= nil then
-                            g_currentMission.missionInfo.timeScale = DispoList.previousMissionTimeScale
-                        end
-                        if g_currentMission.paused ~= nil then
-                            g_currentMission.paused = false
-                        end
-                        DispoList.previousTimeScale = nil
-                        DispoList.previousMissionTimeScale = nil
-                    end
+                    if DispoList.restoreFilterPause ~= nil then DispoList.restoreFilterPause() end
                 end
             end
         end
@@ -102,19 +90,7 @@ function DL_Display_XmlBox:loadBox(name, onSave)
                args.clickAreaTable.areaClick == "closeIcon_" then
                 DispoList.filterMenuOpen = false
                 if DispoList.resetSearch ~= nil then DispoList.resetSearch() end
-                if DispoList.filterPauseEnabled then
-                    if DispoList.previousTimeScale ~= nil then
-                        g_currentMission.timeScale = DispoList.previousTimeScale
-                    end
-                    if g_currentMission.missionInfo ~= nil and DispoList.previousMissionTimeScale ~= nil then
-                        g_currentMission.missionInfo.timeScale = DispoList.previousMissionTimeScale
-                    end
-                    if g_currentMission.paused ~= nil then
-                        g_currentMission.paused = false
-                    end
-                    DispoList.previousTimeScale = nil
-                    DispoList.previousMissionTimeScale = nil
-                end
+                if DispoList.restoreFilterPause ~= nil then DispoList.restoreFilterPause() end
             end
         end
     end
